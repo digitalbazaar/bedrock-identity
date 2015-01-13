@@ -1,0 +1,32 @@
+{
+  "name": "bedrock-identity",
+  "version": "0.0.1",
+  "description": "Bedrock identity",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digitalbazaar/bedrock-identity"
+  },
+  "keywords": [
+    "bedrock"
+  ],
+  "author": {
+    "name": "Digital Bazaar, Inc.",
+    "email": "support@digitalbazaar.com",
+    "url": "http://digitalbazaar.com"
+  },
+  "bugs": {
+    "url": "https://github.com/digitalbazaar/bedrock-identity/issues"
+  },
+  "homepage": "https://github.com/digitalbazaar/bedrock-identity",
+  "peerDependencies": {
+    "bedrock": "~0.3.0"
+  },
+  "directories": {
+    "lib": "./lib"
+  },
+  "main": "./lib/identity"
+}
