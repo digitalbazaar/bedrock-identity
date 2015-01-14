@@ -22,8 +22,15 @@
     "url": "https://github.com/digitalbazaar/bedrock-identity/issues"
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
+  "dependencies": {
+    "async": "~0.9.0",
+    "ursa": "v0.8.0"
+  },
   "peerDependencies": {
-    "bedrock": "~0.3.0"
+    "bedrock": "~0.3.0",
+    "bedrock-permission": "~0.1.0",
+    "bedrock-mail": "~0.1.0",
+    "bedrock-mongodb": "~0.1.0"
   },
   "directories": {
     "lib": "./lib"
