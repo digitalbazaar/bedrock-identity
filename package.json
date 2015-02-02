@@ -28,9 +28,9 @@
   },
   "peerDependencies": {
     "bedrock": "~0.3.0",
-    "bedrock-permission": "~0.1.0",
-    "bedrock-mail": "~0.1.0",
-    "bedrock-mongodb": "~0.1.0"
+    "bedrock-permission": "~0.0.1",
+    "bedrock-mail": "~0.0.1",
+    "bedrock-mongodb": "~0.0.1"
   },
   "directories": {
     "lib": "./lib"
