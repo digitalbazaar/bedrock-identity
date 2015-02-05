@@ -24,6 +24,7 @@
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
     "async": "~0.9.0",
+    "bcrypt": "~0.7.8",
     "ursa": "v0.8.0"
   },
   "peerDependencies": {
