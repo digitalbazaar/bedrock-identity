@@ -2,7 +2,7 @@
   "name": "bedrock-identity",
   "version": "0.0.1",
   "description": "Bedrock identity",
-  "main": "index.js",
+  "main": "./lib/identity",
   "scripts": {
     "test": "node test.js"
   },
@@ -25,6 +25,7 @@
   "dependencies": {
     "async": "~0.9.0",
     "bcrypt": "~0.7.8",
+    "jsonld-signatures": "~0.2.4",
     "ursa": "v0.8.0"
   },
   "peerDependencies": {
@@ -35,6 +36,5 @@
   },
   "directories": {
     "lib": "./lib"
-  },
-  "main": "./lib/identity"
+  }
 }
