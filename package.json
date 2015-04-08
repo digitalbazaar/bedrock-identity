@@ -1,6 +1,6 @@
 {
   "name": "bedrock-identity",
-  "version": "0.1.1-dev",
+  "version": "1.0.0",
   "description": "Bedrock identity",
   "main": "./lib/identity",
   "scripts": {
@@ -29,10 +29,10 @@
     "ursa": "~0.8.2"
   },
   "peerDependencies": {
-    "bedrock": "~0.3.0",
-    "bedrock-permission": "~0.1.0",
-    "bedrock-mail": "~0.1.0",
-    "bedrock-mongodb": "~0.1.0"
+    "bedrock": "^1.0.0",
+    "bedrock-permission": "^1.0.0",
+    "bedrock-mail": "^1.0.0",
+    "bedrock-mongodb": "^1.0.0"
   },
   "directories": {
     "lib": "./lib"

@@ -1,7 +1,0 @@
-{
-  "name": "bedrock-identity",
-  "main": "./app.js",
-  "ignore": [],
-  "dependencies": {
-  }
-}
