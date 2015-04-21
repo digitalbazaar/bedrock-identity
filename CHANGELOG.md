@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fix database result access.
+
 ## [1.0.0] - 2015-04-08
 
 ### Security
