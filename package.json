@@ -30,7 +30,7 @@
   },
   "peerDependencies": {
     "bedrock": "^1.0.0",
-    "bedrock-permission": "^1.0.0",
+    "bedrock-permission": "^1.1.0",
     "bedrock-mail": "^1.0.0",
     "bedrock-mongodb": "^1.0.0"
   },
