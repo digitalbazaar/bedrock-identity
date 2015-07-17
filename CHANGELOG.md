@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Catch `ursa` exceptions and return Bedrock errors.
+
 ## [1.0.1] - 2015-05-07
 
 ### Fixed
