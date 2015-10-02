@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Add abstraction layer to use `crypto` and fallback to `ursa`.
+- Check buffers with `buffer-equal` to fix node 0.10.x compatibility.
+
 ## [1.0.2] - 2015-07-16
 
 ### Changed
