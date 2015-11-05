@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- `checkKeyPair()` workaround to try to detect invalid private key vs invalid
+  key pair.
+
 ### Changed
 - Add abstraction layer to use `crypto` and fallback to `ursa`.
 - Check buffers with `buffer-equal` to fix node 0.10.x compatibility.

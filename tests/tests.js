@@ -28,4 +28,24 @@ describe('bedrock-identity', function() {
         done();
       });
   });
+  it('should error on an invalid public key', function(done) {
+    brIdentity.checkKeyPair(
+      config.identity.test.badPublicKey.publicKeyPem,
+      config.identity.test.badPublicKey.privateKeyPem,
+      function(err) {
+        should.exist(err);
+        err.name.should.equal('InvalidPublicKey');
+        done();
+      });
+  });
+  it('should error on an invalid private key', function(done) {
+    brIdentity.checkKeyPair(
+      config.identity.test.badPrivateKey.publicKeyPem,
+      config.identity.test.badPrivateKey.privateKeyPem,
+      function(err) {
+        should.exist(err);
+        err.name.should.equal('InvalidPrivateKey');
+        done();
+      });
+  });
 });
