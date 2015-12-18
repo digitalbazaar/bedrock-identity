@@ -23,11 +23,7 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "async": "^1.4.2",
-    "buffer-equal": "^0.0.1"
-  },
-  "optionalDependencies": {
-    "ursa": "~0.9.1"
+    "async": "^1.4.2"
   },
   "peerDependencies": {
     "bedrock": "^1.0.0",
