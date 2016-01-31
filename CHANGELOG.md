@@ -2,14 +2,10 @@
 
 ## [Unreleased]
 
-### Fixed
-- `checkKeyPair()` workaround to try to detect invalid private key vs invalid
-  key pair.
+## [2.0.0] - 2016-01-31
 
 ### Changed
-- Add abstraction layer to use `crypto` and fallback to `ursa`.
-- Check buffers with `buffer-equal` to fix node 0.10.x compatibility.
-- Moved key functionality to `bedrock-key`.
+- **BREAKING**: Moved key functionality to `bedrock-key`.
 
 ## [1.0.2] - 2015-07-16
 
@@ -30,7 +26,8 @@
 
 - See git history for changes.
 
-[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/1.0.2...HEAD
+[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/2.0.0...HEAD
+[2.0.0]: https://github.com/digitalbazaar/bedrock-identity/compare/1.0.2...2.0.0
 [1.0.2]: https://github.com/digitalbazaar/bedrock-identity/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/digitalbazaar/bedrock-identity/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/digitalbazaar/bedrock-identity/compare/0.1.0...1.0.0
