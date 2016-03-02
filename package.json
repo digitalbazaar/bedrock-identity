@@ -1,6 +1,6 @@
 {
   "name": "bedrock-identity",
-  "version": "3.0.0",
+  "version": "3.0.1-dev",
   "description": "Bedrock identity",
   "main": "./lib/identity",
   "scripts": {
