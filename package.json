@@ -1,6 +1,6 @@
 {
   "name": "bedrock-identity",
-  "version": "2.0.1-dev",
+  "version": "3.0.0-dev",
   "description": "Bedrock identity",
   "main": "./lib/identity",
   "scripts": {
@@ -23,12 +23,15 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "async": "^1.5.2"
+    "async": "^1.5.2",
+    "bedrock": "^1.0.0",
+    "bedrock-permission": "^2.0.0",
+    "bedrock-mongodb": "^2.0.0"
   },
   "peerDependencies": {
     "bedrock": "^1.0.0",
-    "bedrock-permission": "^1.1.0",
-    "bedrock-mongodb": "^1.0.0"
+    "bedrock-permission": "^2.0.0",
+    "bedrock-mongodb": "^2.0.0"
   },
   "directories": {
     "lib": "./lib"

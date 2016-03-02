@@ -1,6 +1,10 @@
 # bedrock-identity
 Bedrock identity
 
+## Requirements
+
+- npm v3+
+
 TODO
 
 ## Mail Triggers
