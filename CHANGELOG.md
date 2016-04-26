@@ -1,5 +1,7 @@
 # bedrock-identity ChangeLog
 
+## [4.0.1] - 2016-04-26
+
 ## [4.0.0] - 2016-04-26
 
 ### Changed
@@ -46,7 +48,8 @@
 
 - See git history for changes.
 
-[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.0...HEAD
+[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.1...HEAD
+[4.0.1]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/digitalbazaar/bedrock-identity/compare/3.0.2...4.0.0
 [3.0.2]: https://github.com/digitalbazaar/bedrock-identity/compare/3.0.1...3.0.2
 [3.0.1]: https://github.com/digitalbazaar/bedrock-identity/compare/3.0.0...3.0.1
