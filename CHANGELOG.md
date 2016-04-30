@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## [4.0.2] - 2016-04-30
+
+## Changed
+- Remove plaintext passcode and password from new identities.
+
 ## [4.0.1] - 2016-04-26
 
 ## [4.0.0] - 2016-04-26
@@ -48,7 +53,8 @@
 
 - See git history for changes.
 
-[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.1...HEAD
+[Unreleased]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.2...HEAD
+[4.0.2]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/digitalbazaar/bedrock-identity/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/digitalbazaar/bedrock-identity/compare/3.0.2...4.0.0
 [3.0.2]: https://github.com/digitalbazaar/bedrock-identity/compare/3.0.1...3.0.2
