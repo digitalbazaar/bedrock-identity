@@ -1,5 +1,7 @@
 # bedrock-identity ChangeLog
 
+## 4.2.1 - 2016-06-07
+
 ### Changed
 - Update dependencies.
 
