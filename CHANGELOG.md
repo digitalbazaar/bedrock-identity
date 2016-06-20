@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.2.2 - 2016-06-20
+
+### Fixed
+- Add existence checks before transforming roles.
+
 ## 4.2.1 - 2016-06-07
 
 ### Changed
