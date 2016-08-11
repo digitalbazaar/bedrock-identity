@@ -1,9 +1,11 @@
 {
-  "name": "bedrock-identity",
-  "version": "4.2.3-dev",
-  "description": "Bedrock identity",
+  "name": "bedrock-identity-test",
+  "version": "0.0.1-0",
+  "description": "Bedrock identity test",
   "main": "./lib",
-  "scripts": {},
+  "scripts": {
+    "test": "node --preserve-symlinks test.js test"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/digitalbazaar/bedrock-identity"
@@ -21,14 +23,10 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "async": "^1.5.2"
-  },
-  "peerDependencies": {
+    "async": "^1.5.2",
     "bedrock": "^1.0.0",
     "bedrock-permission": "^2.2.0",
-    "bedrock-mongodb": "^3.0.0"
-  },
-  "directories": {
-    "lib": "./lib"
+    "bedrock-mongodb": "^3.0.0",
+    "bedrock-test": "^1.0.0"
   }
 }
