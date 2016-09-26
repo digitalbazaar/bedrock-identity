@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.2.3 - 2016-09-26
+
+### Changed
+- Restructure test framework for CI.
+
 ## 4.2.2 - 2016-06-20
 
 ### Fixed
