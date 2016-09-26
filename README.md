@@ -1,4 +1,7 @@
 # bedrock-identity
+
+[![Build Status](http://ci.digitalbazaar.com/buildStatus/icon?job=bedrock-identity)](http://ci.digitalbazaar.com/job/bedrock-identity)
+
 Bedrock identity
 
 ## Requirements
