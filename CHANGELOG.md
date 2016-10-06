@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+### Fixed
+- Use `IDENTITY_ACCESS` instead of `IDENTITY_ADMIN` for getting
+  all identities (note: the permission must have no restriction
+  restriction for the permission check to pass).
+
 ## 4.2.3 - 2016-09-26
 
 ### Changed
