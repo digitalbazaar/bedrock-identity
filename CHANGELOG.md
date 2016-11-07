@@ -1,5 +1,13 @@
 # bedrock-identity ChangeLog
 
+## 4.3.0 - 2016-11-07
+
+### Added
+- Implement `generateResource` API.
+- Tests for `insert` API.
+
+## 4.2.4 - 2016-10-06
+
 ### Fixed
 - Use `IDENTITY_ACCESS` instead of `IDENTITY_ADMIN` for getting
   all identities (note: the permission must have no restriction
