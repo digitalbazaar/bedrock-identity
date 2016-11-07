@@ -212,4 +212,235 @@ describe('bedrock-identity', function() {
       });
     }); // end admin user
   }); // end get API
+  describe('insert API', () => {
+    describe('null actor', () => {
+      it('should insert an identity in the database', done => {
+        var userName = 'de3c2700-0c5d-4b75-bd6b-02dee985e39d';
+        var newIdentity = helpers.createIdentity(userName);
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName);
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(0);
+                identity.url.should.equal('https://example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should return error on duplicate identity', done => {
+        var userName = '99748241-3599-41a0-8445-d092de558b9f';
+        var newIdentity = helpers.createIdentity(userName);
+        async.auto({
+          insertAlpha: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertBeta: ['insertAlpha', callback => {
+            // attempt to insert the same identity again
+            brIdentity.insert(null, newIdentity, (err, result) => {
+              should.exist(err);
+              should.not.exist(result);
+              database.isDuplicateError(err).should.be.true;
+              callback();
+            });
+          }]
+        }, done);
+      });
+      it('should properly generate a resource ID for one role', done => {
+        var userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName);
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.url.should.equal('https://example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                // test sysResourceRole
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(1);
+                testRole(
+                  identity.sysResourceRole[0], 'bedrock-identity.regular',
+                  ['https://example.com/i/' + userName]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('returns error if generateResouce !== `id`', done => {
+        var userName = 'e29ea95f-fb91-4a03-8bdf-26d254caa953';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'notId'
+        });
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, (err, result) => {
+              should.not.exist(result);
+              should.exist(err);
+              err.name.should.equal('InvalidResourceRole');
+              err.message.should.equal(
+                'Could not create Identity; unknown ResourceRole rule.');
+              err.details.should.be.an('object');
+              err.details.sysResourceRole.should.be.an('object');
+              err.details.sysResourceRole.sysRole
+                .should.equal('bedrock-identity.regular');
+              err.details.sysResourceRole.generateResource
+                .should.equal('notId');
+              callback();
+            });
+          }
+        }, done);
+      });
+      it('generates a resource ID for one role with other resources', done => {
+        var userName = '9d8a65ad-ab7c-407a-b818-e3a090680673';
+        var altName = 'b7f24a46-9128-4aec-ab3d-1e9d7770f7da';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id',
+          resource: ['https://example.com/i/' + altName]
+        });
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName);
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.url.should.equal('https://example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                // test sysResourceRole
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(1);
+                testRole(
+                  identity.sysResourceRole[0], 'bedrock-identity.regular',
+                  ['https://example.com/i/' + userName,
+                  'https://example.com/i/' + altName]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should properly generate a resource ID for three roles', done => {
+        var userName = '6ed0734c-8a29-499f-8a21-eb3bd7923620';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.alpha',
+          generateResource: 'id'
+        });
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.beta',
+          generateResource: 'id'
+        });
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.gamma',
+          generateResource: 'id'
+        });
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName);
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.url.should.equal('https://example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                // test sysResourceRole
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(3);
+                testRole(
+                  identity.sysResourceRole[0], 'bedrock-identity.alpha',
+                  ['https://example.com/i/' + userName]);
+                testRole(
+                  identity.sysResourceRole[1], 'bedrock-identity.beta',
+                  ['https://example.com/i/' + userName]);
+                testRole(
+                  identity.sysResourceRole[2], 'bedrock-identity.gamma',
+                  ['https://example.com/i/' + userName]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+    });
+  }); // end insert API
 }); // end bedrock-identity
+
+function testRole(role, roleId, resource) {
+  role.should.be.an('object');
+  should.not.exist(role.generateResource);
+  should.exist(role.sysRole);
+  role.sysRole.should.equal(roleId);
+  should.exist(role.resource);
+  role.resource.should.be.an('array');
+  role.resource.should.have.same.members(resource);
+}
