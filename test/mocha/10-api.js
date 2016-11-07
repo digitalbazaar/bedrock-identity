@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
  */
-/* globals describe, it, before, should */
-/* jshint node: true */
+/* globals should */
 'use strict';
 
 var async = require('async');
@@ -188,7 +187,7 @@ describe('bedrock-identity', function() {
         });
       });
     }); // end regular user
-    describe('regular user', function() {
+    describe('admin user', function() {
       it('should be able to access itself', function(done) {
         var actor = actors.admin;
         var testIdentity = actors.admin;
@@ -211,6 +210,6 @@ describe('bedrock-identity', function() {
           done();
         });
       });
-    }); // end regular user
-  });
-});
+    }); // end admin user
+  }); // end get API
+}); // end bedrock-identity
