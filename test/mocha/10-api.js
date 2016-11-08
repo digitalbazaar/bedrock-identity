@@ -433,6 +433,80 @@ describe('bedrock-identity', function() {
       });
     });
   }); // end insert API
+  describe('exists API', () => {
+    describe('null actor', () => {
+      it('returns false if identity does not exist', done => {
+        var actor = null;
+        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        brIdentity.exists(actor, id, (err, result) => {
+          result.should.be.false;
+          done();
+        });
+      });
+      it('returns true if identity exists', done => {
+        var actor = null;
+        var userName = '9d8a34bb-6b3a-4b1a-b69c-322fbbd9536e';
+        var newIdentity = helpers.createIdentity(userName);
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            brIdentity.exists(actor, newIdentity.id, (err, result) => {
+              result.should.be.true;
+              callback();
+            });
+          }]
+        }, done);
+      });
+    }); // end null actor
+    describe('regular user', () => {
+      it('returns PermissionDenied when another user ID is specified', done => {
+        var actor = actors.alpha;
+        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        brIdentity.exists(actor, id, (err) => {
+          should.exist(err);
+          err.name.should.equal('PermissionDenied');
+          err.details.sysPermission
+            .should.equal('IDENTITY_ACCESS');
+          done();
+        });
+      });
+      it('returns true if own identity exists', done => {
+        var actor = actors.alpha;
+        brIdentity.exists(actor, actor.id, (err, result) => {
+          result.should.be.true;
+          done();
+        });
+      });
+    }); // end regular user
+    describe('admin user', () => {
+      it('returns false if identity does not exist', done => {
+        var actor = actors.admin;
+        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        brIdentity.exists(actor, id, (err, result) => {
+          result.should.be.false;
+          done();
+        });
+      });
+      it('returns true if identity exists', done => {
+        var actor = actors.admin;
+        var userName = '474af20b-fdf8-472b-a22a-b510bebf452f';
+        var newIdentity = helpers.createIdentity(userName);
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            brIdentity.exists(actor, newIdentity.id, (err, result) => {
+              result.should.be.true;
+              callback();
+            });
+          }]
+        }, done);
+      });
+    }); // end admin user
+  }); // end exists API
 }); // end bedrock-identity
 
 function testRole(role, roleId, resource) {
