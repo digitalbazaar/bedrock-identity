@@ -459,6 +459,41 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('returns false for deleted identity by default', done => {
+        var actor = null;
+        var userName = '8a354515-17cb-453d-b45a-5d3964706f9f';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysStatus = 'deleted';
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            brIdentity.exists(actor, newIdentity.id, (err, result) => {
+              result.should.be.false;
+              callback();
+            });
+          }]
+        }, done);
+      });
+      it('returns true for deleted identity with deleted option', done => {
+        var actor = null;
+        var userName = '76fbb25e-514d-4566-b270-b08ff8989543';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysStatus = 'deleted';
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            brIdentity.exists(
+              actor, newIdentity.id, {deleted: true}, (err, result) => {
+                result.should.be.true;
+                callback();
+              });
+          }]
+        }, done);
+      });
     }); // end null actor
     describe('regular user', () => {
       it('returns PermissionDenied when another user ID is specified', done => {
