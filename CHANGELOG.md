@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.4.0 - 2016-11-10
+
+### Added
+- Implement `exists` API.
+
 ## 4.3.0 - 2016-11-07
 
 ### Added
