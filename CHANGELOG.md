@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.5.0 - 2016-11-10
+
+### Added
+- Add `options` parameter to `exists` API.
+
 ## 4.4.0 - 2016-11-10
 
 ### Added
