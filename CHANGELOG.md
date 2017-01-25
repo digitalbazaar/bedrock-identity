@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.5.1 - 2017-01-25
+
+### Changed
+- Update local cache of `identity-v1` context.
+
 ## 4.5.0 - 2016-11-10
 
 ### Added
