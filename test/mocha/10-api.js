@@ -265,6 +265,17 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should return error when memberOf is specified', done => {
+        var userName = '7764af06-7fdf-4e5b-9866-94efea14d915';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.memberOf = [newIdentity.id];
+        brIdentity.insert(null, newIdentity, (err, result) => {
+          should.exist(err);
+          err.name.should.equal('NotAcceptable');
+          should.not.exist(result);
+          done();
+        });
+      });
       it('should properly generate a resource ID for one role', done => {
         var userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
         var newIdentity = helpers.createIdentity(userName);
