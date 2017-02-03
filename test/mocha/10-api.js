@@ -444,6 +444,49 @@ describe('bedrock-identity', function() {
       });
     });
   }); // end insert API
+  describe('update API', () => {
+    describe('null actor', () => {
+      it('should update an identity in the database', done => {
+        var userName = '388f3331-1015-4b2b-9ed2-f931fe53d074';
+        var newIdentity = helpers.createIdentity(userName);
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          update: ['insert', callback => {
+            const updatedIdentity = newIdentity;
+            updatedIdentity.url = 'https://new.example.com';
+            updatedIdentity.label = userName + 'UPDATED';
+            brIdentity.update(null, updatedIdentity, callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName + 'UPDATED');
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(0);
+                identity.url.should.equal('https://new.example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                callback();
+              });
+          }]
+        }, done);
+      });
+    });
+  });
   describe('exists API', () => {
     describe('null actor', () => {
       it('returns false if identity does not exist', done => {
