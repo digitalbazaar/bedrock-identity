@@ -28,7 +28,9 @@ roles['bedrock-identity.regular'] = {
   comment: 'Role for Test User',
   sysPermission: [
     permissions.IDENTITY_ACCESS.id,
-    permissions.IDENTITY_EDIT.id
+    permissions.IDENTITY_EDIT.id,
+    permissions.IDENTITY_INSERT.id,
+    permissions.IDENTITY_UPDATE_MEMBERSHIP.id
   ]
 };
 roles['bedrock-identity.admin'] = {

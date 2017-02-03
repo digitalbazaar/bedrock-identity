@@ -486,6 +486,49 @@ describe('bedrock-identity', function() {
         }, done);
       });
     });
+    describe('regular actor', () => {
+      it('should update an identity in the database', done => {
+        var actor = actors.alpha;
+        var userName = '6e1e026d-a679-4714-aecd-9f948a3d19e7';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.owner = actor.id;
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(actor, newIdentity, callback);
+          },
+          update: ['insert', callback => {
+            const updatedIdentity = newIdentity;
+            updatedIdentity.url = 'https://new.example.com';
+            updatedIdentity.label = userName + 'UPDATED';
+            brIdentity.update(actor, updatedIdentity, callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName + 'UPDATED');
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(0);
+                identity.url.should.equal('https://new.example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                callback();
+              });
+          }]
+        }, done);
+      });
+    });
   });
   describe('exists API', () => {
     describe('null actor', () => {
