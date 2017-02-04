@@ -485,6 +485,36 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should update identity to be in group', done => {
+        var userName = '2d0b166b-c428-421b-8ed5-ecf0d444cdc7';
+        var groupName = 'cd2a84ff-04be-4efd-9b9b-14f4c920236e';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(null, newGroup, callback);
+          }],
+          update: ['insertGroup', callback => {
+            const updatedIdentity = newIdentity;
+            updatedIdentity.memberOf = newGroup.id;
+            brIdentity.update(null, updatedIdentity, callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                callback();
+              });
+          }]
+        }, done);
+      });
     });
     describe('regular actor', () => {
       it('should update an identity in the database', done => {
@@ -523,6 +553,44 @@ describe('bedrock-identity', function() {
                 identity.url.should.equal('https://new.example.com');
                 identity.description.should.equal(userName);
                 identity.sysStatus.should.equal('active');
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should update identity to be in group', done => {
+        var userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
+        var groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newGroup.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', callback => {
+            const updatedIdentity = newIdentity;
+            updatedIdentity.memberOf = newGroup.id;
+            brIdentity.update(newIdentity, updatedIdentity, callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
                 callback();
               });
           }]
