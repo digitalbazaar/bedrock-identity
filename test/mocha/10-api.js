@@ -596,6 +596,44 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should not update identity in non-owned group', done => {
+        var actor = actors.alpha;
+        var userName = '49b3e2c4-64db-42a1-9c10-464c85e2f25d';
+        var groupName = 'c85f98e9-cf58-483b-951f-58c341f4774d';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.owner = actor.id;
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newGroup.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(actor, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', callback => {
+            const updatedIdentity = newIdentity;
+            updatedIdentity.memberOf = newGroup.id;
+            brIdentity.update(actor, updatedIdentity, err => {
+              should.exist(err);
+              err.name.should.equal('PermissionDenied');
+              err.details.sysPermission.should.equal(
+                'IDENTITY_UPDATE_MEMBERSHIP');
+              err.details.should.be.an('object');
+              callback();
+            });
+          }]
+        }, done);
+      });
     });
   });
   describe('exists API', () => {
