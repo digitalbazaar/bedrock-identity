@@ -162,6 +162,27 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('returns not found error when active option is specified',
+        function(done) {
+          var testIdentity = actors['will-b-disabled'];
+          async.auto({
+            deleteIdentity: function(callback) {
+              brIdentity.setStatus(null, testIdentity.id, 'deleted', callback);
+            },
+            getIdentity: ['deleteIdentity', function(callback) {
+              brIdentity
+                .get(null, testIdentity.id, {active: true}, function(err, i) {
+                  should.exist(err);
+                  should.not.exist(i);
+                  err.name.should.equal('NotFound');
+                  callback();
+                });
+            }],
+            activateIdentity: ['getIdentity', function(callback) {
+              brIdentity.setStatus(null, testIdentity.id, 'active', callback);
+            }]
+          }, done);
+        });
     }); // end null actor
     describe('regular user', function() {
       it('should be able to access itself', function(done) {
