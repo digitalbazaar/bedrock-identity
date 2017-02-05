@@ -21,7 +21,8 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "async": "^1.5.2"
+    "async": "^1.5.2",
+    "lodash": "^4.17.4"
   },
   "peerDependencies": {
     "bedrock": "^1.0.0",

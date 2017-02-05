@@ -247,6 +247,19 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should return error when memberOf group does not exist', done => {
+        var userName = '7764af06-7fdf-4e5b-9866-94efea14d915';
+        var groupName = '0bf1576c-9e67-4915-a133-622174ea9835';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newIdentity.memberOf = [newGroup.id];
+        brIdentity.insert(null, newIdentity, (err, result) => {
+          should.exist(err);
+          err.name.should.equal('InvalidResource');
+          should.not.exist(result);
+          done();
+        });
+      });
       it('should return error on duplicate identity', done => {
         var userName = '99748241-3599-41a0-8445-d092de558b9f';
         var newIdentity = helpers.createIdentity(userName);
@@ -264,17 +277,6 @@ describe('bedrock-identity', function() {
             });
           }]
         }, done);
-      });
-      it('should return error when memberOf is specified', done => {
-        var userName = '7764af06-7fdf-4e5b-9866-94efea14d915';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.memberOf = [newIdentity.id];
-        brIdentity.insert(null, newIdentity, (err, result) => {
-          should.exist(err);
-          err.name.should.equal('NotAcceptable');
-          should.not.exist(result);
-          done();
-        });
       });
       it('should properly generate a resource ID for one role', done => {
         var userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
@@ -437,6 +439,32 @@ describe('bedrock-identity', function() {
                 testRole(
                   identity.sysResourceRole[2], 'bedrock-identity.gamma',
                   ['https://example.com/i/' + userName]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should insert identity containing a group', done => {
+        var userName = '344cef84-5d1e-4972-9c4e-861c487a8498';
+        var groupName = '8f46904d-3c18-468e-8843-0238e25b74dc';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newIdentity.memberOf = [newGroup.id];
+        async.auto({
+          insertGroup: callback => {
+            brIdentity.insert(null, newGroup, callback);
+          },
+          insertIdentity: ['insertGroup', callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          }],
+          test: ['insertIdentity', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
                 callback();
               });
           }]
