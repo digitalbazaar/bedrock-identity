@@ -471,6 +471,70 @@ describe('bedrock-identity', function() {
         }, done);
       });
     });
+    describe('regular actor', () => {
+      it('should insert an identity in the database', done => {
+        var actor = actors.alpha;
+        var userName = '3e5e5bac-40f9-4c20-981e-375f4a5fe4e2';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.owner = actor.id;
+        async.auto({
+          insert: callback => {
+            brIdentity.insert(actor, newIdentity, callback);
+          },
+          test: ['insert', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                should.exist(meta.created);
+                meta.created.should.be.a('number');
+                should.exist(meta.updated);
+                meta.updated.should.be.a('number');
+                var identity = results.identity;
+                identity.id.should.equal('https://example.com/i/' + userName);
+                identity.type.should.equal('Identity');
+                identity.sysSlug.should.equal(userName);
+                identity.label.should.equal(userName);
+                identity.email.should.equal(userName + '@bedrock.dev');
+                identity.sysPublic.should.be.an('array');
+                identity.sysPublic.should.have.length(0);
+                identity.sysResourceRole.should.be.an('array');
+                identity.sysResourceRole.should.have.length(0);
+                identity.url.should.equal('https://example.com');
+                identity.description.should.equal(userName);
+                identity.sysStatus.should.equal('active');
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should not insert an ownerless identity in the database', done => {
+        var actor = actors.alpha;
+        var userName = '3940ce06-8f56-4196-972a-b8f574e8db0e';
+        var newIdentity = helpers.createIdentity(userName);
+        brIdentity.insert(actor, newIdentity, (err, result) => {
+          should.exist(err);
+          err.name.should.equal('PermissionDenied');
+          err.details.sysPermission.should.equal('IDENTITY_INSERT');
+          should.not.exist(result);
+          done();
+        });
+      });
+      it('should return error when memberOf group does not exist', done => {
+        var actor = actors.alpha;
+        var userName = '75ef5bdf-7863-41e4-bf3d-4f6ce6cab344';
+        var groupName = 'e314422b-3001-45c0-88d1-406e40739196';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newIdentity.owner = actor.id;
+        newIdentity.memberOf = [newGroup.id];
+        brIdentity.insert(actor, newIdentity, (err, result) => {
+          should.exist(err);
+          err.name.should.equal('InvalidResource');
+          should.not.exist(result);
+          done();
+        });
+      });
+    });
   }); // end insert API
   describe('update API', () => {
     describe('null actor', () => {
