@@ -27,7 +27,7 @@ describe('bedrock-identity part 2', function() {
       }]
     }, done);
   });
-  describe.only('updateRole API', function() {
+  describe('updateRole API', function() {
     describe('null actor', function() {
     }); // end null actor
     describe('regular user', function() {
