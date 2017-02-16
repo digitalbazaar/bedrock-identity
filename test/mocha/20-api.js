@@ -27,7 +27,7 @@ describe('bedrock-identity part 2', function() {
       }]
     }, done);
   });
-  describe('updateRole API', function() {
+  describe.only('updateRole API', function() {
     describe('null actor', function() {
     }); // end null actor
     describe('regular user', function() {
@@ -53,6 +53,24 @@ describe('bedrock-identity part 2', function() {
                 actors.organization.id, actors['organization-owner'].id]);
               callback();
             })]
+        }, done);
+      });
+      it('`PermissionDenied` if actor is not owner of resourceId', done => {
+        const roleId = 'bedrock-identity.regular';
+        async.auto({
+          update: callback => brIdentity.updateRole(
+            actors['organization-owner'], {
+              role: roleId,
+              identityId: actors['organization-owner'].id,
+              resourceId: actors.alpha.id,
+              operation: 'add'
+            }, (err, result) => {
+              expect(err).to.be.ok;
+              expect(result).not.to.be.ok;
+              err.name.should.equal('PermissionDenied');
+              err.details.sysPermission.should.equal('IDENTITY_ACCESS');
+              callback();
+            })
         }, done);
       });
     });
