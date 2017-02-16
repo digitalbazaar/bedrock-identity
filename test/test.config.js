@@ -14,8 +14,6 @@ config.mocha.tests.push(path.join(__dirname, 'mocha'));
 
 // mongodb config
 config.mongodb.name = 'bedrock_identity_test';
-config.mongodb.host = 'localhost';
-config.mongodb.port = 27017;
 config.mongodb.local.collection = 'bedrock_identity_test';
 // drop all collections on initialization
 config.mongodb.dropCollections = {};

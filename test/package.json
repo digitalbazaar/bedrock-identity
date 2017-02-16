@@ -4,7 +4,9 @@
   "description": "Bedrock identity test",
   "main": "./lib",
   "scripts": {
-    "test": "node --preserve-symlinks test.js test"
+    "ci-test": "node --preserve-symlinks test.js test --mocha-reporter=tap",
+    "test": "node --preserve-symlinks test.js test",
+    "watch": "grunt watch"
   },
   "repository": {
     "type": "git",
@@ -27,7 +29,8 @@
     "bedrock": "^1.0.0",
     "bedrock-permission": "^2.2.0",
     "bedrock-mongodb": "^3.0.0",
-    "bedrock-test": "^1.0.0",
+    "bedrock-test": "digitalbazaar/bedrock-test#grunt",
+    "grunt": "^1.0.1",
     "lodash": "^4.17.4"
   }
 }

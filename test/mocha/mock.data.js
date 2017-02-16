@@ -36,6 +36,22 @@ userName = 'gamma';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
 
+// organization owner
+userName = 'organization-owner';
+identities[userName] = {};
+identities[userName].identity = helpers.createIdentity(userName);
+identities[userName].identity.sysResourceRole.push({
+  sysRole: 'bedrock-identity.regular',
+  generateResource: 'id'
+});
+
+// organization owner
+userName = 'organization';
+identities[userName] = {};
+identities[userName].identity = helpers.createIdentity(userName);
+identities[userName].identity.owner =
+  identities['organization-owner'].identity.id;
+
 // regular permissions
 var userName = 'will-b-disabled';
 identities[userName] = {};
