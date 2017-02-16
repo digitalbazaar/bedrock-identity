@@ -4,6 +4,7 @@
   "description": "Bedrock identity test",
   "main": "./lib",
   "scripts": {
+    "ci-test": "node --preserve-symlinks test.js test --mocha-reporter=tap",
     "test": "node --preserve-symlinks test.js test",
     "watch": "grunt watch"
   },
