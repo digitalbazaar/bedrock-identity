@@ -30,7 +30,8 @@ roles['bedrock-identity.regular'] = {
     permissions.IDENTITY_ACCESS.id,
     permissions.IDENTITY_EDIT.id,
     permissions.IDENTITY_INSERT.id,
-    permissions.IDENTITY_UPDATE_MEMBERSHIP.id
+    permissions.IDENTITY_UPDATE_MEMBERSHIP.id,
+    permissions.IDENTITY_ROLE_DELEGATE.id
   ]
 };
 roles['bedrock-identity.admin'] = {
@@ -42,6 +43,7 @@ roles['bedrock-identity.admin'] = {
     permissions.IDENTITY_ADMIN.id,
     permissions.IDENTITY_EDIT.id,
     permissions.IDENTITY_INSERT.id,
-    permissions.IDENTITY_REMOVE.id
+    permissions.IDENTITY_REMOVE.id,
+    permissions.IDENTITY_ROLE_DELEGATE.id
   ]
 };
