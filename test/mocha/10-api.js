@@ -470,6 +470,36 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should allow identity w/ sysResourceRole for a group', done => {
+        var userName = '287f1746-1735-413c-9c53-6226f90c5112';
+        var groupName = 'd2dc97b7-08e1-4e27-8cdc-08db71e304d0';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newIdentity.memberOf = [newGroup.id];
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          resource: newGroup.id
+        });
+        async.auto({
+          insertGroup: callback => {
+            brIdentity.insert(null, newGroup, callback);
+          },
+          insertIdentity: ['insertGroup', callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          }],
+          test: ['insertIdentity', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                callback();
+              });
+          }]
+        }, done);
+      });
     });
     describe('regular actor', () => {
       it('should insert an identity in the database', done => {
@@ -607,6 +637,45 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should allow identity w/ sysResourceRole for a group', done => {
+        var userName = '814b3e02-db14-4fa2-b45b-5d8f977ac087';
+        var groupName = '8314e48c-ff51-427e-aa7b-524cda45b708';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newIdentity.memberOf = [newGroup.id];
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        }, {
+          sysRole: 'bedrock-identity.regular',
+          resource: [newGroup.id]
+        });
+        async.auto({
+          insertGroup: callback => {
+            brIdentity.insert(null, newGroup, callback);
+          },
+          insertIdentity: ['insertGroup', callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          }],
+          test: ['insertIdentity', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }]);
+                callback();
+              });
+          }]
+        }, done);
+      });
     });
     describe('regular actor', () => {
       it('should update an identity in the database', done => {
@@ -720,6 +789,95 @@ describe('bedrock-identity', function() {
               err.name.should.equal('PermissionDenied');
               err.details.sysPermission.should.equal(
                 'IDENTITY_UPDATE_MEMBERSHIP');
+              err.details.should.be.an('object');
+              callback();
+            });
+          }]
+        }, done);
+      });
+      it('should allow identity update w/ sysResourceRole for owned group',
+        done => {
+        var userName = 'fb37c8f9-20f7-4138-823e-f05d0d0e4272';
+        var groupName = '7bbc9b88-0f9a-4af9-9f0e-3d55398cf58a';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newIdentity.memberOf = [newGroup.id];
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertGroup: callback => {
+            brIdentity.insert(null, newGroup, callback);
+          },
+          insertIdentity: ['insertGroup', callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          }],
+          updateIdentity: ['insertIdentity', (callback, results) => {
+            var insertedIdentity = results.insertIdentity.identity;
+            var identityUpdate = {
+              id: results.insertIdentity.identity.id,
+              sysResourceRole: [
+                results.insertIdentity.identity.sysResourceRole[0], {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+              }]
+            };
+            brIdentity.update(insertedIdentity, identityUpdate, callback);
+          }],
+          test: ['updateIdentity', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should not update identity w/ sysResourceRole for unowned group',
+        done => {
+        var userName = '44dbedd2-d648-468b-83c1-1d512af58e34';
+        var groupName = '6f745f69-caa5-4163-aab6-40631e50ccab';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newGroup.id;
+        newIdentity.memberOf = [newGroup.id];
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertGroup: callback => {
+            brIdentity.insert(null, newGroup, callback);
+          },
+          insertIdentity: ['insertGroup', callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          }],
+          updateIdentity: ['insertIdentity', (callback, results) => {
+            var insertedIdentity = results.insertIdentity.identity;
+            var identityUpdate = {
+              id: results.insertIdentity.identity.id,
+              sysResourceRole: [
+                results.insertIdentity.identity.sysResourceRole[0], {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+              }]
+            };
+            brIdentity.update(
+              insertedIdentity, identityUpdate, (err, record) => {
+              should.exist(err);
+              err.name.should.equal('PermissionDenied');
               err.details.should.be.an('object');
               callback();
             });
