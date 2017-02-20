@@ -816,16 +816,19 @@ describe('bedrock-identity', function() {
             brIdentity.insert(null, newIdentity, callback);
           }],
           updateIdentity: ['insertIdentity', (callback, results) => {
-            var insertedIdentity = results.insertIdentity.identity;
-            var identityUpdate = {
-              id: results.insertIdentity.identity.id,
-              sysResourceRole: [
-                results.insertIdentity.identity.sysResourceRole[0], {
+            const insertedIdentity = results.insertIdentity.identity;
+            const changes = {
+              op: 'add',
+              value: {
+                sysResourceRole: {
                   sysRole: 'bedrock-identity.regular',
                   resource: [newGroup.id]
-              }]
+                }
+              }
             };
-            brIdentity.update(insertedIdentity, identityUpdate, callback);
+            brIdentity.update(
+              insertedIdentity, insertedIdentity.id, {changes: changes},
+              callback);
           }],
           test: ['updateIdentity', callback => {
             database.collections.identity.findOne(
@@ -837,7 +840,8 @@ describe('bedrock-identity', function() {
                   resource: [identity.id]
                 }, {
                   sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
+                  resource: [newGroup.id],
+                  delegator: identity.id
                 }]);
                 callback();
               });
@@ -865,17 +869,19 @@ describe('bedrock-identity', function() {
             brIdentity.insert(null, newIdentity, callback);
           }],
           updateIdentity: ['insertIdentity', (callback, results) => {
-            var insertedIdentity = results.insertIdentity.identity;
-            var identityUpdate = {
-              id: results.insertIdentity.identity.id,
-              sysResourceRole: [
-                results.insertIdentity.identity.sysResourceRole[0], {
+            const insertedIdentity = results.insertIdentity.identity;
+            const changes = [{
+              op: 'add',
+              value: {
+                sysResourceRole: [{
                   sysRole: 'bedrock-identity.regular',
                   resource: [newGroup.id]
-              }]
-            };
+                }]
+              }
+            }];
             brIdentity.update(
-              insertedIdentity, identityUpdate, (err, record) => {
+              insertedIdentity, insertedIdentity.id,
+              {changes: changes}, (err, record) => {
               should.exist(err);
               err.name.should.equal('PermissionDenied');
               err.details.should.be.an('object');
