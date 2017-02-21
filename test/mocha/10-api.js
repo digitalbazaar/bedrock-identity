@@ -713,6 +713,114 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
+      it('should update identity to be in group and add capabilities via change set', done => {
+        var userName = 'd871a7d0-64ea-4b40-96fe-52a92785ac68';
+        var groupName = '45c19b62-86b7-4faf-8cd7-f03368eee353';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(null, newGroup, callback);
+          }],
+          update: ['insertGroup', (callback, results) => {
+            const updatedIdentity = newIdentity;
+            const changes = {
+              op: 'add',
+              value: {
+                memberOf: newGroup.id,
+                sysResourceRole: {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }
+              }
+            };
+            brIdentity.update(
+              null, updatedIdentity.id, {changes: changes},
+              callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should update identity to be in group and add capabilities via 2-item change set', done => {
+        var userName = '774e4c52-f7c1-4f64-a6dc-655eaa69ce21';
+        var groupName = '4d6d6fb6-af9d-46d7-9e90-1450b11869aa';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(null, newGroup, callback);
+          }],
+          update: ['insertGroup', (callback, results) => {
+            const updatedIdentity = newIdentity;
+            const changes = [{
+              op: 'add',
+              value: {
+                memberOf: newGroup.id
+              }
+            }, {
+              op: 'add',
+              value: {
+                sysResourceRole: {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }
+              }
+            }];
+            brIdentity.update(
+              null, updatedIdentity.id, {changes: changes},
+              callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }]);
+                callback();
+              });
+          }]
+        }, done);
+      });
     });
     describe('regular actor', () => {
       it('should update an identity in the database', done => {
@@ -1013,6 +1121,116 @@ describe('bedrock-identity', function() {
               err.details.should.be.an('object');
               callback();
             });
+          }]
+        }, done);
+      });
+      it('should update identity to be in group and add capabilities via change set', done => {
+        var userName = '0719944b-ac5d-4b46-ab83-dc3c5c1f41f7';
+        var groupName = 'd6ad3b0d-aa06-43f4-aa61-be915bbfe771';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', (callback, results) => {
+            const updatedIdentity = newIdentity;
+            const changes = {
+              op: 'add',
+              value: {
+                memberOf: newGroup.id,
+                sysResourceRole: {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }
+              }
+            };
+            brIdentity.update(
+              updatedIdentity, updatedIdentity.id, {changes: changes},
+              callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id],
+                  delegator: identity.id
+                }]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should update identity to be in group and add capabilities via 2-item change set', done => {
+        var userName = '1ee52e5c-17cf-4b57-8a19-e2ebf340135c';
+        var groupName = 'dc7ff6b1-5094-4256-a76b-496f6c91840e';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', (callback, results) => {
+            const updatedIdentity = newIdentity;
+            const changes = [{
+              op: 'add',
+              value: {
+                memberOf: newGroup.id
+              }
+            }, {
+              op: 'add',
+              value: {
+                sysResourceRole: {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id]
+                }
+              }
+            }];
+            brIdentity.update(
+              updatedIdentity, updatedIdentity.id, {changes: changes},
+              callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                identity.sysResourceRole.should.include.deep.members([{
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [identity.id]
+                }, {
+                  sysRole: 'bedrock-identity.regular',
+                  resource: [newGroup.id],
+                  delegator: identity.id
+                }]);
+                callback();
+              });
           }]
         }, done);
       });
