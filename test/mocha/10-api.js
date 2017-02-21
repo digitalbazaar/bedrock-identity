@@ -756,7 +756,7 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
-      it('should update identity to be in group', done => {
+      it('should update identity to be in group via legacy API', done => {
         var userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
         var groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
         var newIdentity = helpers.createIdentity(userName);
@@ -794,7 +794,52 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
-      it('should not update identity in non-owned group', done => {
+      it('should update identity to be in group via change set', done => {
+        var userName = 'f1ad8833-201a-4413-9dd1-129e88032635';
+        var groupName = '94d859fe-417e-4e57-b416-60547d8996f0';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newGroup.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', callback => {
+            const updatedIdentity = newIdentity;
+            const changes = {
+              op: 'add',
+              value: {
+                memberOf: newGroup.id
+              }
+            }
+            brIdentity.update(
+              updatedIdentity, updatedIdentity.id, {changes: changes},
+              callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should not update identity in non-owned group via legacy API', done => {
         var actor = actors.alpha;
         var userName = '49b3e2c4-64db-42a1-9c10-464c85e2f25d';
         var groupName = 'c85f98e9-cf58-483b-951f-58c341f4774d';
@@ -822,6 +867,50 @@ describe('bedrock-identity', function() {
             const updatedIdentity = newIdentity;
             updatedIdentity.memberOf = newGroup.id;
             brIdentity.update(actor, updatedIdentity, err => {
+              should.exist(err);
+              err.name.should.equal('PermissionDenied');
+              err.details.sysPermission.should.equal(
+                'IDENTITY_UPDATE_MEMBERSHIP');
+              err.details.should.be.an('object');
+              callback();
+            });
+          }]
+        }, done);
+      });
+      it('should not update identity in non-owned group via change set', done => {
+        var actor = actors.alpha;
+        var userName = '92c2f8ab-a5e1-4b62-88dd-c643518fb583';
+        var groupName = '7f61d0a9-052c-45ea-80a1-de656adef4ba';
+        var newIdentity = helpers.createIdentity(userName);
+        newIdentity.owner = actor.id;
+        newIdentity.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        newGroup.sysResourceRole.push({
+          sysRole: 'bedrock-identity.regular',
+          generateResource: 'id'
+        });
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(actor, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(newIdentity, newGroup, callback);
+          }],
+          update: ['insertGroup', callback => {
+            const updatedIdentity = newIdentity;
+            const changes = {
+              op: 'add',
+              value: {
+                memberOf: newGroup.id
+              }
+            };
+            brIdentity.update(
+              actor, updatedIdentity.id, {changes: changes}, err => {
               should.exist(err);
               err.name.should.equal('PermissionDenied');
               err.details.sysPermission.should.equal(
