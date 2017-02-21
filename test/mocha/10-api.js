@@ -607,7 +607,7 @@ describe('bedrock-identity', function() {
           }]
         }, done);
       });
-      it('should update identity to be in group', done => {
+      it('should update identity to be in group via legacy API', done => {
         var userName = '2d0b166b-c428-421b-8ed5-ecf0d444cdc7';
         var groupName = 'cd2a84ff-04be-4efd-9b9b-14f4c920236e';
         var newIdentity = helpers.createIdentity(userName);
@@ -625,6 +625,43 @@ describe('bedrock-identity', function() {
             const updatedIdentity = newIdentity;
             updatedIdentity.memberOf = newGroup.id;
             brIdentity.update(null, updatedIdentity, callback);
+          }],
+          test: ['update', callback => {
+            database.collections.identity.findOne(
+              {id: database.hash(newIdentity.id)}, (err, results) => {
+                var meta = results.meta;
+                var identity = results.identity;
+                identity.memberOf.should.have.same.members([newGroup.id]);
+                callback();
+              });
+          }]
+        }, done);
+      });
+      it('should update identity to be in group via change set', done => {
+        var userName = '84ae6082-0f48-43ea-bdb1-176b0b6843a2';
+        var groupName = 'ab00d930-f5d3-4887-a4f5-a4f388fc118e';
+        var newIdentity = helpers.createIdentity(userName);
+        var newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Identity', 'Group'];
+        newGroup.owner = newIdentity.id;
+        async.auto({
+          insertIdentity: callback => {
+            brIdentity.insert(null, newIdentity, callback);
+          },
+          insertGroup: ['insertIdentity', callback => {
+            brIdentity.insert(null, newGroup, callback);
+          }],
+          update: ['insertGroup', (callback, results) => {
+            const updatedIdentity = newIdentity;
+            const changes = {
+              op: 'add',
+              value: {
+                memberOf: newGroup.id
+              }
+            };
+            brIdentity.update(
+              null, updatedIdentity.id, {changes: changes},
+              callback);
           }],
           test: ['update', callback => {
             database.collections.identity.findOne(
