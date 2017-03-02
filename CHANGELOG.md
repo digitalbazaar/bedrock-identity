@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 4.6.0 - 2017-03-02
+
+### Added
+- Add support for group membership.
+
 ## 4.5.1 - 2017-01-25
 
 ### Changed
