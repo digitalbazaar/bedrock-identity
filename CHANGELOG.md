@@ -1,5 +1,9 @@
 # bedrock-identity ChangeLog
 
+### Removed
+- Remove `checkPermission` public API. Previous callers should use
+  `bedrock-permission` module's `checkPermission` instead.
+
 ### Changed
 - Update `bedrock-mongodb` peer dependency.
 - Update test dependencies.
