@@ -6,8 +6,8 @@
   capabilities (represented as resource roles) to another entity.
 
 ### Removed
-- Remove `checkPermission` public API. Previous callers should use
-  `bedrock-permission` module's `checkPermission` instead.
+- ***BREAKING*** Remove `checkPermission` public API. Previous callers
+  should use `bedrock-permission` module's `checkPermission` instead.
 
 ### Changed
 - Update `bedrock-mongodb` peer dependency.
