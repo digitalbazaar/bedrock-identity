@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+### Added
+- Add `validateCapabilityDelegation` public API. Callers may use to ensure
+  that an actor has the capabilities required to delegate the given
+  capabilities (represented as resource roles) to another entity.
+
 ### Removed
 - Remove `checkPermission` public API. Previous callers should use
   `bedrock-permission` module's `checkPermission` instead.
