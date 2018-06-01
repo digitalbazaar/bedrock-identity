@@ -21,13 +21,16 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
+    "assert-plus": "^1.0.0",
     "async": "^1.5.2",
+    "fast-json-patch": "^2.0.6",
     "lodash": "^4.17.4"
   },
   "peerDependencies": {
     "bedrock": "^1.0.0",
     "bedrock-permission": "^2.2.0",
-    "bedrock-mongodb": "3.x - 5.x"
+    "bedrock-mongodb": "3.x - 5.x",
+    "bedrock-validation": "^2.4.0"
   },
   "directories": {
     "lib": "./lib"

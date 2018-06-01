@@ -8,10 +8,17 @@
 ### Removed
 - ***BREAKING*** Remove `checkPermission` public API. Previous callers
   should use `bedrock-permission` module's `checkPermission` instead.
+- ***BREAKING*** Remove `IDENTITY_ADMIN` permission. Use granular permissions
+  like `IDENTITY_META_UPDATE` instead.
 
 ### Changed
 - Update `bedrock-mongodb` peer dependency.
 - Update test dependencies.
+- ***BREAKING*** `update` API now uses JSON patch and requires a sequence
+  number that must match the current record, prior to applying the patch.
+- Rename `IDENTITY_EDIT` permission to `IDENTITY_UPDATE`.
+- ***BREAKING*** Throw `BedrockError` of type `DuplicateError` rather than
+  mongodb duplicate error.
 
 ## 4.6.0 - 2017-03-02
 

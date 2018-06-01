@@ -1,1047 +1,881 @@
 /*
- * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2018 Digital Bazaar, Inc. All rights reserved.
  */
 /* globals should */
+
 'use strict';
 
-var async = require('async');
-var brIdentity = require('bedrock-identity');
-var database = require('bedrock-mongodb');
-var helpers = require('./helpers');
-var mockData = require('./mock.data');
-var actors = {};
+const brIdentity = require('bedrock-identity');
+const database = require('bedrock-mongodb');
+const helpers = require('./helpers');
+const jsonpatch = require('fast-json-patch');
+const mockData = require('./mock.data');
+let actors;
 
-describe('bedrock-identity', function() {
-  before(function(done) {
-    async.auto({
-      prepare: function(callback) {
-        helpers.prepareDatabase(mockData, callback);
-      },
-      getActors: ['prepare', function(callback) {
-        helpers.getActors(mockData, function(err, result) {
-          actors = result;
-          callback(err);
-        });
-      }]
-    }, done);
+describe('bedrock-identity', () => {
+  before(async () => {
+    await helpers.prepareDatabase(mockData);
+    actors = await helpers.getActors(mockData);
   });
-  describe('setStatus API', function() {
-    describe('null actor', function() {
-      it('should mark an identity deleted, then active', function(done) {
-        var testIdentity = actors['will-b-disabled'];
-        async.auto({
-          deleteIdentity: function(callback) {
-            brIdentity.setStatus(null, testIdentity.id, 'deleted', callback);
-          },
-          checkStatusDeleted: ['deleteIdentity', function(callback) {
-            database.collections.identity.findOne({
-              id: database.hash(testIdentity.id)
-            }, function(err, record) {
-              should.not.exist(err);
-              should.exist(record.identity);
-              var i = record.identity;
-              i.sysStatus.should.equal('deleted');
-              callback();
-            });
-          }],
-          activateIdentity: ['checkStatusDeleted', function(callback) {
-            brIdentity.setStatus(null, testIdentity.id, 'active', callback);
-          }],
-          checkStatusActive: ['activateIdentity', function(callback) {
-            database.collections.identity.findOne({
-              id: database.hash(testIdentity.id)
-            }, function(err, record) {
-              should.not.exist(err);
-              should.exist(record.identity);
-              var i = record.identity;
-              i.sysStatus.should.equal('active');
-              callback();
-            });
-          }]
-        }, done);
-      });
-      it('returns error on a non-existent identity', function(done) {
-        var testIdentity = {id: 'https://example.com/i/nobody'};
-        brIdentity.setStatus(null, testIdentity.id, 'deleted', function(err) {
-          should.exist(err);
-          err.name.should.equal('NotFound');
-          err.details.identityId.should.equal(testIdentity.id);
-          done();
+
+  describe('setStatus API', () => {
+    describe('null actor', () => {
+      it('should mark an identity deleted, then active', async () => {
+        const testIdentity = actors['will-b-disabled'];
+        await brIdentity.setStatus({
+          actor: null,
+          id: testIdentity.id,
+          status: 'deleted'
         });
+
+        // check status is deleted
+        let record = await database.collections.identity.findOne({
+          id: database.hash(testIdentity.id)
+        });
+        should.exist(record.identity);
+        should.exist(record.meta);
+        record.meta.status.should.equal('deleted');
+
+        // reactivate identity
+        await brIdentity.setStatus({
+          actor: null,
+          id: testIdentity.id,
+          status: 'active'
+        });
+
+        // check status is active
+        record = await database.collections.identity.findOne({
+          id: database.hash(testIdentity.id)
+        });
+        should.exist(record.identity);
+        should.exist(record.meta);
+        record.meta.status.should.equal('active');
+      });
+      it('returns error on a non-existent identity', async () => {
+        const testIdentity = {id: 'https://example.com/i/nobody'};
+        let err;
+        try {
+          await brIdentity.setStatus({
+            actor: null,
+            id: testIdentity.id,
+            status: 'deleted'
+          });
+        } catch(e) {
+          e = err;
+        }
+        should.exist(err);
+        err.name.should.equal('NotFoundError');
+        err.details.identity.should.equal(testIdentity.id);
       });
     }); // end null actor
-    describe('regular user', function() {
-      it('permission denied on attempt to change own status', function(done) {
-        var actor = actors.alpha;
-        var testIdentity = actors.alpha;
-        brIdentity
-          .setStatus(actor, testIdentity.id, 'deleted', function(err) {
-            should.exist(err);
-            err.name.should.equal('PermissionDenied');
-            err.details.sysPermission.should.equal('IDENTITY_ADMIN');
-            done();
-          });
+    describe('regular user', () => {
+      it('permission denied on attempt to change own status', async () => {
+        const actor = actors.alpha;
+        const testIdentity = actors.alpha;
+        (() => brIdentity.setStatus({
+          actor,
+          id: testIdentity.id,
+          status: 'deleted'
+        })).should.throw('PermissionDenied');
       });
       it('permission denied on attempt to change another identity\'s status',
-        function(done) {
-          var actor = actors.alpha;
-          var testIdentity = actors.admin;
-          brIdentity
-            .setStatus(actor, testIdentity.id, 'deleted', function(err) {
-              should.exist(err);
-              err.name.should.equal('PermissionDenied');
-              err.details.sysPermission.should.equal('IDENTITY_ADMIN');
-              done();
-            });
+        async () => {
+          const actor = actors.alpha;
+          const testIdentity = actors.admin;
+          (() => brIdentity.setStatus({
+            actor,
+            id: testIdentity.id,
+            status: 'deleted'
+          })).should.throw('PermissionDenied');
         });
     });
     describe('admin user', function() {
-      it('should mark an identity deleted, then active', function(done) {
-        var actor = actors.admin;
-        var testIdentity = actors['will-b-disabled'];
-        async.auto({
-          deleteIdentity: function(callback) {
-            brIdentity.setStatus(actor, testIdentity.id, 'deleted', callback);
-          },
-          checkStatusDeleted: ['deleteIdentity', function(callback) {
-            database.collections.identity.findOne({
-              id: database.hash(testIdentity.id)
-            }, function(err, record) {
-              should.not.exist(err);
-              should.exist(record.identity);
-              var i = record.identity;
-              i.sysStatus.should.equal('deleted');
-              callback();
-            });
-          }],
-          activateIdentity: ['checkStatusDeleted', function(callback) {
-            brIdentity.setStatus(actor, testIdentity.id, 'active', callback);
-          }],
-          checkStatusActive: ['activateIdentity', function(callback) {
-            database.collections.identity.findOne({
-              id: database.hash(testIdentity.id)
-            }, function(err, record) {
-              should.not.exist(err);
-              should.exist(record.identity);
-              var i = record.identity;
-              i.sysStatus.should.equal('active');
-              callback();
-            });
-          }]
-        }, done);
+      it('should mark an identity deleted, then active', async () => {
+        const actor = actors.admin;
+        const testIdentity = actors['will-b-disabled'];
+        await brIdentity.setStatus({
+          actor,
+          id: testIdentity.id,
+          status: 'deleted'
+        });
+
+        // check status is deleted
+        let record = await database.collections.identity.findOne({
+          id: database.hash(testIdentity.id)
+        });
+        should.exist(record.identity);
+        should.exist(record.meta);
+        record.meta.status.should.equal('deleted');
+
+        // reactivate identity
+        await brIdentity.setStatus({
+          actor: null,
+          id: testIdentity.id,
+          status: 'active'
+        });
+
+        // check status is active
+        record = await database.collections.identity.findOne({
+          id: database.hash(testIdentity.id)
+        });
+        should.exist(record.identity);
+        should.exist(record.meta);
+        record.meta.status.should.equal('active');
       });
     });
   });
-  describe('get API', function() {
-    describe('null actor', function() {
-      it('should return error on non-existent identity', function(done) {
-        brIdentity.get(null, 'https://example.com/i/nobody', function(err, i) {
-          should.exist(err);
-          should.not.exist(i);
-          err.name.should.equal('NotFound');
-          done();
-        });
+
+  describe('get API', () => {
+    describe('null actor', () => {
+      it('should return error on non-existent identity', async () => {
+        (() => brIdentity.get({
+          actor: null,
+          id: 'https://example.com/i/nobody'
+        })).should.throw('NotFoundError');
       });
-      it('return identity when active option is not specified', function(done) {
-        var testIdentity = actors['will-b-disabled'];
-        async.auto({
-          deleteIdentity: function(callback) {
-            brIdentity.setStatus(null, testIdentity.id, 'deleted', callback);
-          },
-          getIdentity: ['deleteIdentity', function(callback) {
-            brIdentity.get(null, testIdentity.id, function(err, i) {
-              should.not.exist(err);
-              should.exist(i);
-              i.should.be.an('object');
-              i.sysStatus.should.equal('deleted');
-              callback();
-            });
-          }],
-          activateIdentity: ['getIdentity', function(callback) {
-            brIdentity.setStatus(null, testIdentity.id, 'active', callback);
-          }]
-        }, done);
+      it('return identity when active option is not specified', async () => {
+        const testIdentity = actors['will-b-disabled'];
+
+        await brIdentity.setStatus({
+          actor: null,
+          id: testIdentity.id,
+          status: 'deleted'
+        });
+
+        const record = await brIdentity.get({
+          actor: null,
+          id: testIdentity.id
+        });
+        should.exist(record);
+        record.identity.should.be.an('object');
+        record.meta.should.be.an('object');
+        record.meta.status.should.equal('deleted');
+
+        await brIdentity.setStatus({
+          actor: null,
+          id: testIdentity.id,
+          status: 'active'
+        });
       });
     }); // end null actor
-    describe('regular user', function() {
-      it('should be able to access itself', function(done) {
-        var actor = actors.alpha;
-        var testIdentity = actors.alpha;
-        brIdentity.get(actor, testIdentity.id, function(err, i) {
-          should.not.exist(err);
-          should.exist(i);
-          i.id.should.equal(testIdentity.id);
-          i.sysSlug.should.equal(testIdentity.sysSlug);
-          i.sysStatus.should.equal('active');
-          done();
+    describe('regular user', () => {
+      it('should be able to access itself', async () => {
+        const actor = actors.alpha;
+        const testIdentity = actors.alpha;
+        const record = await brIdentity.get({
+          actor,
+          id: testIdentity.id
         });
+        should.exist(record);
+        record.identity.id.should.equal(testIdentity.id);
+        record.meta.status.should.equal('active');
       });
-      it('should not be able to access another identity', function(done) {
-        var actor = actors.alpha;
-        var testIdentity = actors.admin;
-        brIdentity.get(actor, testIdentity.id, function(err, i) {
-          should.exist(err);
-          should.not.exist(i);
-          err.name.should.equal('PermissionDenied');
-          done();
-        });
+      it('should not be able to access another identity', async () => {
+        const actor = actors.alpha;
+        const testIdentity = actors.admin;
+        let err;
+        let record;
+        try {
+          record = await brIdentity.get({
+            actor,
+            id: testIdentity.id
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        should.not.exist(record);
+        err.name.should.equal('PermissionDenied');
       });
     }); // end regular user
-    describe('admin user', function() {
-      it('should be able to access itself', function(done) {
-        var actor = actors.admin;
-        var testIdentity = actors.admin;
-        brIdentity.get(actor, testIdentity.id, function(err, i) {
-          should.not.exist(err);
-          should.exist(i);
-          i.id.should.equal(testIdentity.id);
-          i.sysSlug.should.equal(testIdentity.sysSlug);
-          i.sysStatus.should.equal('active');
-          done();
+    describe('admin user', () => {
+      it('should be able to access itself', async () => {
+        const actor = actors.admin;
+        const testIdentity = actors.admin;
+        const record = await brIdentity.get({
+          actor,
+          id: testIdentity.id
         });
+        should.exist(record);
+        record.identity.id.should.equal(testIdentity.id);
+        record.meta.status.should.equal('active');
       });
-      it('should be able to access another identity', function(done) {
-        var actor = actors.admin;
-        var testIdentity = actors.alpha;
-        brIdentity.get(actor, testIdentity.id, function(err, i) {
-          should.not.exist(err);
-          should.exist(i);
-          i.id.should.equal(testIdentity.id);
-          done();
+      it('should be able to access another identity', async () => {
+        const actor = actors.admin;
+        const testIdentity = actors.alpha;
+        const record = await brIdentity.get({
+          actor,
+          id: testIdentity.id
         });
+        should.exist(record);
+        record.identity.id.should.equal(testIdentity.id);
       });
     }); // end admin user
   }); // end get API
+
   describe('insert API', () => {
     describe('null actor', () => {
-      it('should insert an identity in the database', done => {
-        var userName = 'de3c2700-0c5d-4b75-bd6b-02dee985e39d';
-        var newIdentity = helpers.createIdentity(userName);
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName);
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(0);
-                identity.url.should.equal('https://example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                callback();
-              });
-          }]
-        }, done);
+      it('should insert an identity in the database', async () => {
+        const userName = 'de3c2700-0c5d-4b75-bd6b-02dee985e39d';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        const {identity, meta} = record;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(0);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
       });
-      it('should return error when memberOf group does not exist', done => {
-        var userName = '7764af06-7fdf-4e5b-9866-94efea14d915';
-        var groupName = '0bf1576c-9e67-4915-a133-622174ea9835';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
+      it('should return error when memberOf group does not exist', async () => {
+        const userName = '7764af06-7fdf-4e5b-9866-94efea14d915';
+        const groupName = '0bf1576c-9e67-4915-a133-622174ea9835';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
         newIdentity.memberOf = [newGroup.id];
-        brIdentity.insert(null, newIdentity, (err, result) => {
-          should.exist(err);
-          err.name.should.equal('InvalidResource');
-          should.not.exist(result);
-          done();
-        });
+        (() => brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        })).should.throw('NotAllowedError');
       });
-      it('should return error on duplicate identity', done => {
-        var userName = '99748241-3599-41a0-8445-d092de558b9f';
-        var newIdentity = helpers.createIdentity(userName);
-        async.auto({
-          insertAlpha: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertBeta: ['insertAlpha', callback => {
-            // attempt to insert the same identity again
-            brIdentity.insert(null, newIdentity, (err, result) => {
-              should.exist(err);
-              should.not.exist(result);
-              database.isDuplicateError(err).should.be.true;
-              callback();
-            });
+      it('should return error on duplicate identity', async () => {
+        const userName = '99748241-3599-41a0-8445-d092de558b9f';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        });
+        // attempt to insert the same identity again
+        let err;
+        try {
+          await brIdentity.insert({
+            actor: null,
+            identity: newIdentity
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('DuplicateError');
+      });
+      it('should properly generate a resource ID for one role', async () => {
+        const userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
+        const newIdentity = helpers.createIdentity(userName);
+        const newMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
           }]
-        }, done);
-      });
-      it('should properly generate a resource ID for one role', done => {
-        var userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        };
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity,
+          meta: newMeta
         });
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName);
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.url.should.equal('https://example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                // test sysResourceRole
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(1);
-                testRole(
-                  identity.sysResourceRole[0], 'bedrock-identity.regular',
-                  ['https://example.com/i/' + userName]);
-                callback();
-              });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        const {identity, meta} = record;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        // test sysResourceRole
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(1);
+        testRole(
+          meta.sysResourceRole[0], 'bedrock-identity.regular',
+          ['https://example.com/i/' + userName]);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
+      });
+      it('returns error if generateResouce !== `id`', async () => {
+        const userName = 'e29ea95f-fb91-4a03-8bdf-26d254caa953';
+        const newIdentity = helpers.createIdentity(userName);
+        const newMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'notId'
           }]
-        }, done);
+        };
+        let err;
+        try {
+          await brIdentity.insert({
+            actor: null,
+            identity: newIdentity,
+            meta: newMeta
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('NotSupportedError');
+        err.message.should.equal(
+          'Could not create Identity; unknown ResourceRole rule.');
+        err.details.should.be.an('object');
+        err.details.sysResourceRole.should.be.an('object');
+        err.details.sysResourceRole.sysRole
+          .should.equal('bedrock-identity.regular');
+        err.details.sysResourceRole.generateResource
+          .should.equal('notId');
       });
-      it('returns error if generateResouce !== `id`', done => {
-        var userName = 'e29ea95f-fb91-4a03-8bdf-26d254caa953';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'notId'
-        });
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, (err, result) => {
-              should.not.exist(result);
-              should.exist(err);
-              err.name.should.equal('InvalidResourceRole');
-              err.message.should.equal(
-                'Could not create Identity; unknown ResourceRole rule.');
-              err.details.should.be.an('object');
-              err.details.sysResourceRole.should.be.an('object');
-              err.details.sysResourceRole.sysRole
-                .should.equal('bedrock-identity.regular');
-              err.details.sysResourceRole.generateResource
-                .should.equal('notId');
-              callback();
-            });
-          }
-        }, done);
+      it('generates a resource ID for one role with other resources',
+        async () => {
+          const userName = '9d8a65ad-ab7c-407a-b818-e3a090680673';
+          const altName = 'b7f24a46-9128-4aec-ab3d-1e9d7770f7da';
+          const newIdentity = helpers.createIdentity(userName);
+          const newMeta = {
+            sysResourceRole: [{
+              sysRole: 'bedrock-identity.regular',
+              generateResource: 'id',
+              resource: ['https://example.com/i/' + altName]
+            }]
+          };
+          await brIdentity.insert({
+            actor: null,
+            identity: newIdentity,
+            meta: newMeta
+          });
+          const record = await database.collections.identity.findOne(
+            {id: database.hash(newIdentity.id)});
+          should.exist(record);
+          const {identity, meta} = record;
+          meta.should.be.an('object');
+          should.exist(meta.created);
+          meta.created.should.be.a('number');
+          should.exist(meta.updated);
+          meta.updated.should.be.a('number');
+          meta.status.should.equal('active');
+          // test sysResourceRole
+          meta.sysResourceRole.should.be.an('array');
+          meta.sysResourceRole.should.have.length(1);
+          testRole(
+            meta.sysResourceRole[0], 'bedrock-identity.regular', [
+              'https://example.com/i/' + userName,
+              'https://example.com/i/' + altName
+            ]);
+          identity.should.be.an('object');
+          identity.id.should.equal('https://example.com/i/' + userName);
+          identity.label.should.equal(userName);
+          identity.email.should.equal(userName + '@bedrock.dev');
+          identity.url.should.equal('https://example.com');
+          identity.description.should.equal(userName);
       });
-      it('generates a resource ID for one role with other resources', done => {
-        var userName = '9d8a65ad-ab7c-407a-b818-e3a090680673';
-        var altName = 'b7f24a46-9128-4aec-ab3d-1e9d7770f7da';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id',
-          resource: ['https://example.com/i/' + altName]
-        });
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName);
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.url.should.equal('https://example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                // test sysResourceRole
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(1);
-                testRole(
-                  identity.sysResourceRole[0], 'bedrock-identity.regular',
-                  ['https://example.com/i/' + userName,
-                  'https://example.com/i/' + altName]);
-                callback();
-              });
+      it('should properly generate a resource ID for three roles', async () => {
+        const userName = '6ed0734c-8a29-499f-8a21-eb3bd7923620';
+        const newIdentity = helpers.createIdentity(userName);
+        const newMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.alpha',
+            generateResource: 'id'
+          }, {
+            sysRole: 'bedrock-identity.beta',
+            generateResource: 'id'
+          }, {
+            sysRole: 'bedrock-identity.gamma',
+            generateResource: 'id'
           }]
-        }, done);
+        };
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity,
+          meta: newMeta
+        });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        const {identity, meta} = record;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        // test sysResourceRole
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(3);
+        testRole(
+          meta.sysResourceRole[0], 'bedrock-identity.alpha',
+          ['https://example.com/i/' + userName]);
+        testRole(
+          meta.sysResourceRole[1], 'bedrock-identity.beta',
+          ['https://example.com/i/' + userName]);
+        testRole(
+          meta.sysResourceRole[2], 'bedrock-identity.gamma',
+          ['https://example.com/i/' + userName]);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
       });
-      it('should properly generate a resource ID for three roles', done => {
-        var userName = '6ed0734c-8a29-499f-8a21-eb3bd7923620';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.alpha',
-          generateResource: 'id'
-        });
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.beta',
-          generateResource: 'id'
-        });
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.gamma',
-          generateResource: 'id'
-        });
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName);
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.url.should.equal('https://example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                // test sysResourceRole
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(3);
-                testRole(
-                  identity.sysResourceRole[0], 'bedrock-identity.alpha',
-                  ['https://example.com/i/' + userName]);
-                testRole(
-                  identity.sysResourceRole[1], 'bedrock-identity.beta',
-                  ['https://example.com/i/' + userName]);
-                testRole(
-                  identity.sysResourceRole[2], 'bedrock-identity.gamma',
-                  ['https://example.com/i/' + userName]);
-                callback();
-              });
-          }]
-        }, done);
-      });
-      it('should insert identity containing a group', done => {
-        var userName = '344cef84-5d1e-4972-9c4e-861c487a8498';
-        var groupName = '8f46904d-3c18-468e-8843-0238e25b74dc';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
+      it('should insert identity containing a group', async () => {
+        const userName = '344cef84-5d1e-4972-9c4e-861c487a8498';
+        const groupName = '8f46904d-3c18-468e-8843-0238e25b74dc';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Identity', 'Group'];
         newGroup.owner = newIdentity.id;
         newIdentity.memberOf = [newGroup.id];
-        async.auto({
-          insertGroup: callback => {
-            brIdentity.insert(null, newGroup, callback);
-          },
-          insertIdentity: ['insertGroup', callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          }],
-          test: ['insertIdentity', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
-          }]
-        }, done);
+        await brIdentity.insert({
+          actor: null,
+          identity: newGroup
+        });
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        should.exist(record.meta);
+        should.exist(record.identity);
+        const {identity} = record;
+        identity.memberOf.should.have.same.members([newGroup.id]);
       });
-      it('should allow identity w/ sysResourceRole for a group', done => {
-        var userName = '287f1746-1735-413c-9c53-6226f90c5112';
-        var groupName = 'd2dc97b7-08e1-4e27-8cdc-08db71e304d0';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
+      it('should allow identity w/ sysResourceRole of a group', async () => {
+        const userName = '287f1746-1735-413c-9c53-6226f90c5112';
+        const groupName = 'd2dc97b7-08e1-4e27-8cdc-08db71e304d0';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Identity', 'Group'];
         newGroup.owner = newIdentity.id;
         newIdentity.memberOf = [newGroup.id];
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          resource: newGroup.id
-        });
-        async.auto({
-          insertGroup: callback => {
-            brIdentity.insert(null, newGroup, callback);
-          },
-          insertIdentity: ['insertGroup', callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          }],
-          test: ['insertIdentity', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
+        const newMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            resource: newGroup.id
           }]
-        }, done);
+        };
+        await brIdentity.insert({
+          actor: null,
+          identity: newGroup
+        });
+        await brIdentity.insert({
+          actor: null,
+          identity: newIdentity,
+          meta: newMeta
+        });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        should.exist(record.meta);
+        should.exist(record.identity);
+        const {identity} = record;
+        identity.memberOf.should.have.same.members([newGroup.id]);
       });
     });
     describe('regular actor', () => {
-      it('should insert an identity in the database', done => {
-        var actor = actors.alpha;
-        var userName = '3e5e5bac-40f9-4c20-981e-375f4a5fe4e2';
-        var newIdentity = helpers.createIdentity(userName);
+      it('should insert an owned identity in the database', async () => {
+        const actor = actors.alpha;
+        const userName = '3e5e5bac-40f9-4c20-981e-375f4a5fe4e2';
+        const newIdentity = helpers.createIdentity(userName);
         newIdentity.owner = actor.id;
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(actor, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName);
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(0);
-                identity.url.should.equal('https://example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                callback();
-              });
-          }]
-        }, done);
+        await brIdentity.insert({
+          actor,
+          identity: newIdentity
+        });
+        const record = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(record);
+        const {identity, meta} = record;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(0);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.owner.should.equal(actor.id);
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
       });
-      it('should not insert an ownerless identity in the database', done => {
-        var actor = actors.alpha;
-        var userName = '3940ce06-8f56-4196-972a-b8f574e8db0e';
-        var newIdentity = helpers.createIdentity(userName);
-        brIdentity.insert(actor, newIdentity, (err, result) => {
+      it('should not insert an ownerless identity in the database',
+        async () => {
+          const actor = actors.alpha;
+          const userName = '3940ce06-8f56-4196-972a-b8f574e8db0e';
+          const newIdentity = helpers.createIdentity(userName);
+          let err;
+          try {
+            await brIdentity.insert({
+              actor,
+              identity: newIdentity
+            });
+          } catch(e) {
+            err = e;
+          }
           should.exist(err);
           err.name.should.equal('PermissionDenied');
           err.details.sysPermission.should.equal('IDENTITY_INSERT');
-          should.not.exist(result);
-          done();
-        });
       });
-      it('should return error when memberOf group does not exist', done => {
-        var actor = actors.alpha;
-        var userName = '75ef5bdf-7863-41e4-bf3d-4f6ce6cab344';
-        var groupName = 'e314422b-3001-45c0-88d1-406e40739196';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
+      it('should return error when memberOf group does not exist', async () => {
+        const actor = actors.alpha;
+        const userName = '75ef5bdf-7863-41e4-bf3d-4f6ce6cab344';
+        const groupName = 'e314422b-3001-45c0-88d1-406e40739196';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
         newIdentity.owner = actor.id;
         newIdentity.memberOf = [newGroup.id];
-        brIdentity.insert(actor, newIdentity, (err, result) => {
-          should.exist(err);
-          err.name.should.equal('InvalidResource');
-          should.not.exist(result);
-          done();
-        });
+        (() => brIdentity.insert({
+          actor,
+          identity: newIdentity
+        })).should.throw('NotAllowedError');
       });
     });
   }); // end insert API
+
   describe('update API', () => {
     describe('null actor', () => {
-      it('should update an identity in the database', done => {
-        var userName = '388f3331-1015-4b2b-9ed2-f931fe53d074';
-        var newIdentity = helpers.createIdentity(userName);
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          update: ['insert', callback => {
-            const updatedIdentity = newIdentity;
-            updatedIdentity.url = 'https://new.example.com';
-            updatedIdentity.label = userName + 'UPDATED';
-            brIdentity.update(null, updatedIdentity, callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName + 'UPDATED');
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(0);
-                identity.url.should.equal('https://new.example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                callback();
-              });
-          }]
-        }, done);
+      it('should update an identity in the database', async () => {
+        const userName = '388f3331-1015-4b2b-9ed2-f931fe53d074';
+        const newIdentity = helpers.createIdentity(userName);
+        const newRecord = await brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        });
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.url = 'https://new.example.com';
+        updatedIdentity.label = userName + 'UPDATED';
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        await brIdentity.update({
+          actor: null,
+          patch,
+          sequence: 0
+        });
+        const updatedRecord = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(updatedRecord);
+        const {identity, meta} = updatedRecord;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(0);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName + 'UPDATED');
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://new.example.com');
+        identity.description.should.equal(userName);
       });
-      it('should update identity to be in group via legacy API', done => {
-        var userName = '2d0b166b-c428-421b-8ed5-ecf0d444cdc7';
-        var groupName = 'cd2a84ff-04be-4efd-9b9b-14f4c920236e';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
+      it('should update identity to be in group', async () => {
+        const userName = '2d0b166b-c428-421b-8ed5-ecf0d444cdc7';
+        const groupName = 'cd2a84ff-04be-4efd-9b9b-14f4c920236e';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Group'];
         newGroup.owner = newIdentity.id;
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(null, newGroup, callback);
-          }],
-          update: ['insertGroup', callback => {
-            const updatedIdentity = newIdentity;
-            updatedIdentity.memberOf = newGroup.id;
-            brIdentity.update(null, updatedIdentity, callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
-          }]
-        }, done);
+        const newRecord = await brIdentity.insert({
+          actor: null,
+          identity: newIdentity
+        });
+        await brIdentity.insert({
+          actor: null,
+          identity: newGroup
+        });
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.memberOf = newGroup.id;
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        await brIdentity.update({
+          actor: null,
+          patch,
+          sequence: 0
+        });
+        const updatedRecord = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(updatedRecord);
+        const {identity, meta} = updatedRecord;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(0);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
+        identity.memberOf.should.have.same.members([newGroup.id]);
       });
-      it('should update identity to be in group via change set', done => {
-        var userName = '84ae6082-0f48-43ea-bdb1-176b0b6843a2';
-        var groupName = 'ab00d930-f5d3-4887-a4f5-a4f388fc118e';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
+      it('should update identity w/ sysResourceRole of a group', async () => {
+        const userName = '814b3e02-db14-4fa2-b45b-5d8f977ac087';
+        const groupName = '8314e48c-ff51-427e-aa7b-524cda45b708';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Identity', 'Group'];
-        newGroup.owner = newIdentity.id;
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(null, newGroup, callback);
-          }],
-          update: ['insertGroup', (callback, results) => {
-            const updatedIdentity = newIdentity;
-            const changes = {
-              op: 'add',
-              value: {
-                memberOf: newGroup.id
-              }
-            };
-            brIdentity.update(
-              null, updatedIdentity.id, {changes: changes},
-              callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
-          }]
-        }, done);
-      });
-      it('should allow identity w/ sysResourceRole for a group', done => {
-        var userName = '814b3e02-db14-4fa2-b45b-5d8f977ac087';
-        var groupName = '8314e48c-ff51-427e-aa7b-524cda45b708';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
+        // TODO: this test is potentially odd because the identity is the
+        // owner of the group and automatically inherits all its capabilities
+        // without the additional resource role ... should, instead, it not be
+        // the owner?
         newGroup.owner = newIdentity.id;
         newIdentity.memberOf = [newGroup.id];
-        newIdentity.sysResourceRole.push({
+        const newMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
+          }, {
+            sysRole: 'bedrock-identity.regular',
+            resource: [newGroup.id]
+          }]
+        };
+        await brIdentity.insert({
+          actor: null,
+          identity: newGroup
+        });
+        const newRecord = await brIdentity.insert({
+          actor: null,
+          identity: newIdentity,
+          meta: newMeta
+        });
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.memberOf = newGroup.id;
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        await brIdentity.update({
+          actor: null,
+          patch,
+          sequence: 0
+        });
+        const updatedRecord = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(updatedRecord);
+        const {identity, meta} = updatedRecord;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(2);
+        meta.sysResourceRole.should.include.deep.members([{
           sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+          resource: [identity.id]
         }, {
           sysRole: 'bedrock-identity.regular',
           resource: [newGroup.id]
-        });
-        async.auto({
-          insertGroup: callback => {
-            brIdentity.insert(null, newGroup, callback);
-          },
-          insertIdentity: ['insertGroup', callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          }],
-          test: ['insertIdentity', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.sysResourceRole.should.include.deep.members([{
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [identity.id]
-                }, {
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
-                }]);
-                callback();
-              });
-          }]
-        }, done);
-      });
-      it('should update identity to be in group and add capabilities via change set', done => {
-        var userName = 'd871a7d0-64ea-4b40-96fe-52a92785ac68';
-        var groupName = '45c19b62-86b7-4faf-8cd7-f03368eee353';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
-        newGroup.owner = newIdentity.id;
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(null, newGroup, callback);
-          }],
-          update: ['insertGroup', (callback, results) => {
-            const updatedIdentity = newIdentity;
-            const changes = {
-              op: 'add',
-              value: {
-                memberOf: newGroup.id,
-                sysResourceRole: {
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
-                }
-              }
-            };
-            brIdentity.update(
-              null, updatedIdentity.id, {changes: changes},
-              callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                identity.sysResourceRole.should.include.deep.members([{
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [identity.id]
-                }, {
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
-                }]);
-                callback();
-              });
-          }]
-        }, done);
-      });
-      it('should update identity to be in group and add capabilities via 2-item change set', done => {
-        var userName = '774e4c52-f7c1-4f64-a6dc-655eaa69ce21';
-        var groupName = '4d6d6fb6-af9d-46d7-9e90-1450b11869aa';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
-        newGroup.owner = newIdentity.id;
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(null, newGroup, callback);
-          }],
-          update: ['insertGroup', (callback, results) => {
-            const updatedIdentity = newIdentity;
-            const changes = [{
-              op: 'add',
-              value: {
-                memberOf: newGroup.id
-              }
-            }, {
-              op: 'add',
-              value: {
-                sysResourceRole: {
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
-                }
-              }
-            }];
-            brIdentity.update(
-              null, updatedIdentity.id, {changes: changes},
-              callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                identity.sysResourceRole.should.include.deep.members([{
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [identity.id]
-                }, {
-                  sysRole: 'bedrock-identity.regular',
-                  resource: [newGroup.id]
-                }]);
-                callback();
-              });
-          }]
-        }, done);
+        }]);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
+        identity.memberOf.should.have.same.members([newGroup.id]);
       });
     });
     describe('regular actor', () => {
-      it('should update an identity in the database', done => {
-        var actor = actors.alpha;
-        var userName = '6e1e026d-a679-4714-aecd-9f948a3d19e7';
-        var newIdentity = helpers.createIdentity(userName);
+      it('should update an identity in the database', async () => {
+        const actor = actors.alpha;
+        const userName = '6e1e026d-a679-4714-aecd-9f948a3d19e7';
+        const newIdentity = helpers.createIdentity(userName);
         newIdentity.owner = actor.id;
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(actor, newIdentity, callback);
-          },
-          update: ['insert', callback => {
-            const updatedIdentity = newIdentity;
-            updatedIdentity.url = 'https://new.example.com';
-            updatedIdentity.label = userName + 'UPDATED';
-            brIdentity.update(actor, updatedIdentity, callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                should.exist(meta.created);
-                meta.created.should.be.a('number');
-                should.exist(meta.updated);
-                meta.updated.should.be.a('number');
-                var identity = results.identity;
-                identity.id.should.equal('https://example.com/i/' + userName);
-                identity.type.should.equal('Identity');
-                identity.sysSlug.should.equal(userName);
-                identity.label.should.equal(userName + 'UPDATED');
-                identity.email.should.equal(userName + '@bedrock.dev');
-                identity.sysPublic.should.be.an('array');
-                identity.sysPublic.should.have.length(0);
-                identity.sysResourceRole.should.be.an('array');
-                identity.sysResourceRole.should.have.length(0);
-                identity.url.should.equal('https://new.example.com');
-                identity.description.should.equal(userName);
-                identity.sysStatus.should.equal('active');
-                callback();
-              });
-          }]
-        }, done);
-      });
-      it('should update identity to be in group via legacy API', done => {
-        var userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
-        var groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        const newRecord = await brIdentity.insert({
+          actor,
+          identity: newIdentity
         });
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.url = 'https://new.example.com';
+        updatedIdentity.label = userName + 'UPDATED';
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        await brIdentity.update({
+          actor,
+          patch,
+          sequence: 0
+        });
+        const updatedRecord = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(updatedRecord);
+        const {identity, meta} = updatedRecord;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(0);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName + 'UPDATED');
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://new.example.com');
+        identity.description.should.equal(userName);
+      });
+      it('should update identity to be in group', async () => {
+        const actor = actors.alpha;
+        const userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
+        const groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
+        const newIdentity = helpers.createIdentity(userName);
+        const newIdentityMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
+          }]
+        };
+        const newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Group'];
         newGroup.owner = newIdentity.id;
-        newGroup.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(newIdentity, newGroup, callback);
-          }],
-          update: ['insertGroup', callback => {
-            const updatedIdentity = newIdentity;
-            updatedIdentity.memberOf = newGroup.id;
-            brIdentity.update(newIdentity, updatedIdentity, callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
+        const newGroupMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
           }]
-        }, done);
-      });
-      it('should update identity to be in group via change set', done => {
-        var userName = 'f1ad8833-201a-4413-9dd1-129e88032635';
-        var groupName = '94d859fe-417e-4e57-b416-60547d8996f0';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        };
+        const newRecord = await brIdentity.insert({
+          actor,
+          identity: newIdentity,
+          meta: newIdentityMeta
         });
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
-        newGroup.owner = newIdentity.id;
-        newGroup.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        const newActor = await brIdentity.getCapabilities({id: newIdentity.id});
+        await brIdentity.insert({
+          actor: newActor,
+          identity: newGroup,
+          meta: newGroupMeta
         });
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(newIdentity, newGroup, callback);
-          }],
-          update: ['insertGroup', callback => {
-            const updatedIdentity = newIdentity;
-            const changes = {
-              op: 'add',
-              value: {
-                memberOf: newGroup.id
-              }
-            }
-            brIdentity.update(
-              updatedIdentity, updatedIdentity.id, {changes: changes},
-              callback);
-          }],
-          test: ['update', callback => {
-            database.collections.identity.findOne(
-              {id: database.hash(newIdentity.id)}, (err, results) => {
-                var meta = results.meta;
-                var identity = results.identity;
-                identity.memberOf.should.have.same.members([newGroup.id]);
-                callback();
-              });
-          }]
-        }, done);
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.memberOf = newGroup.id;
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        await brIdentity.update({
+          actor: newActor,
+          patch,
+          sequence: 0
+        });
+        const updatedRecord = await database.collections.identity.findOne(
+          {id: database.hash(newIdentity.id)});
+        should.exist(updatedRecord);
+        const {identity, meta} = updatedRecord;
+        meta.should.be.an('object');
+        should.exist(meta.created);
+        meta.created.should.be.a('number');
+        should.exist(meta.updated);
+        meta.updated.should.be.a('number');
+        meta.status.should.equal('active');
+        meta.sysResourceRole.should.be.an('array');
+        meta.sysResourceRole.should.have.length(1);
+        identity.should.be.an('object');
+        identity.id.should.equal('https://example.com/i/' + userName);
+        identity.label.should.equal(userName);
+        identity.email.should.equal(userName + '@bedrock.dev');
+        identity.url.should.equal('https://example.com');
+        identity.description.should.equal(userName);
+        identity.memberOf.should.have.same.members([newGroup.id]);
       });
-      it('should not update identity in non-owned group via legacy API', done => {
-        var actor = actors.alpha;
-        var userName = '49b3e2c4-64db-42a1-9c10-464c85e2f25d';
-        var groupName = 'c85f98e9-cf58-483b-951f-58c341f4774d';
-        var newIdentity = helpers.createIdentity(userName);
+      it('should fail to add identity to a group because the actor used ',
+        'does not have the capability', async () => {
+        const actor = actors.alpha;
+        const userName = '49b3e2c4-64db-42a1-9c10-464c85e2f25d';
+        const groupName = 'c85f98e9-cf58-483b-951f-58c341f4774d';
+        const newIdentity = helpers.createIdentity(userName);
         newIdentity.owner = actor.id;
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
-        var newGroup = helpers.createIdentity(groupName);
+        const newIdentityMeta = {
+          sysResourceRole: {
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
+          }
+        };
+        const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Identity', 'Group'];
         newGroup.owner = newIdentity.id;
-        newGroup.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(actor, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(newIdentity, newGroup, callback);
-          }],
-          update: ['insertGroup', callback => {
-            const updatedIdentity = newIdentity;
-            updatedIdentity.memberOf = newGroup.id;
-            brIdentity.update(actor, updatedIdentity, err => {
-              should.exist(err);
-              err.name.should.equal('PermissionDenied');
-              err.details.sysPermission.should.equal(
-                'IDENTITY_UPDATE_MEMBERSHIP');
-              err.details.should.be.an('object');
-              callback();
-            });
+        const newGroupMeta = {
+          sysResourceRole: [{
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
           }]
-        }, done);
-      });
-      it('should not update identity in non-owned group via change set', done => {
-        var actor = actors.alpha;
-        var userName = '92c2f8ab-a5e1-4b62-88dd-c643518fb583';
-        var groupName = '7f61d0a9-052c-45ea-80a1-de656adef4ba';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.owner = actor.id;
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        };
+        const newRecord = await brIdentity.insert({
+          actor,
+          identity: newIdentity,
+          meta: newIdentityMeta
         });
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
-        newGroup.owner = newIdentity.id;
-        newGroup.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
+        const newActor = await brIdentity.getCapabilities({id: newIdentity.id});
+        await brIdentity.insert({
+          actor: newActor,
+          identity: newGroup,
+          meta: newGroupMeta
         });
-        async.auto({
-          insertIdentity: callback => {
-            brIdentity.insert(actor, newIdentity, callback);
-          },
-          insertGroup: ['insertIdentity', callback => {
-            brIdentity.insert(newIdentity, newGroup, callback);
-          }],
-          update: ['insertGroup', callback => {
-            const updatedIdentity = newIdentity;
-            const changes = {
-              op: 'add',
-              value: {
-                memberOf: newGroup.id
-              }
-            };
-            brIdentity.update(
-              actor, updatedIdentity.id, {changes: changes}, err => {
-              should.exist(err);
-              err.name.should.equal('PermissionDenied');
-              err.details.sysPermission.should.equal(
-                'IDENTITY_UPDATE_MEMBERSHIP');
-              err.details.should.be.an('object');
-              callback();
-            });
-          }]
-        }, done);
+        const updatedIdentity = newRecord.identity;
+        const observer = jsonpatch.observe(updatedIdentity);
+        updatedIdentity.memberOf = newGroup.id;
+        const patch = jsonpatch.generate(observer);
+        jsonpatch.unobserve(observer);
+        // use original `regular` actor -- it should fail!
+        let err;
+        try {
+          await brIdentity.update({
+            actor,
+            patch,
+            sequence: 0
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('PermissionDenied');
+        err.details.should.be.an('object');
+        err.details.sysPermission.should.equal(
+          'IDENTITY_UPDATE_MEMBERSHIP');
       });
-      it('should allow identity update w/ sysResourceRole for owned group',
+      it('should allow identity update w/ sysResourceRole of owned group',
         done => {
-        var userName = 'fb37c8f9-20f7-4138-823e-f05d0d0e4272';
-        var groupName = '7bbc9b88-0f9a-4af9-9f0e-3d55398cf58a';
-        var newIdentity = helpers.createIdentity(userName);
-        var newGroup = helpers.createIdentity(groupName);
-        newGroup.type = ['Identity', 'Group'];
+        const userName = 'fb37c8f9-20f7-4138-823e-f05d0d0e4272';
+        const groupName = '7bbc9b88-0f9a-4af9-9f0e-3d55398cf58a';
+        const newIdentity = helpers.createIdentity(userName);
+        const newGroup = helpers.createIdentity(groupName);
+        newGroup.type = ['Group'];
         newGroup.owner = newIdentity.id;
         newIdentity.memberOf = [newGroup.id];
-        newIdentity.sysResourceRole.push({
-          sysRole: 'bedrock-identity.regular',
-          generateResource: 'id'
-        });
+        const newIdentityMeta = {
+          sysResourceRole: {
+            sysRole: 'bedrock-identity.regular',
+            generateResource: 'id'
+          }
+        };
+        // FIXME: all of this should be using `setRoles`
+        // ... do we need an "addRole"?
+
         async.auto({
           insertGroup: callback => {
             brIdentity.insert(null, newGroup, callback);
@@ -1236,6 +1070,7 @@ describe('bedrock-identity', function() {
       });
     });
   });
+
   describe('exists API', () => {
     describe('null actor', () => {
       it('returns false if identity does not exist', done => {

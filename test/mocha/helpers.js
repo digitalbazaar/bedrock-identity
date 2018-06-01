@@ -1,94 +1,65 @@
 /*
- * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2018 Digital Bazaar, Inc. All rights reserved.
  */
 /* jshint node: true */
 
 'use strict';
 
-var async = require('async');
-var brIdentity = require('bedrock-identity');
-var database = require('bedrock-mongodb');
+const brIdentity = require('bedrock-identity');
+const database = require('bedrock-mongodb');
+const {promisify} = require('util');
 
-var api = {};
+const api = {};
 module.exports = api;
 
-api.createIdentity = function(userName) {
-  var newIdentity = {
+api.createIdentity = userName => {
+  const newIdentity = {
     id: 'https://example.com/i/' + userName,
-    type: 'Identity',
-    sysSlug: userName,
     label: userName,
     email: userName + '@bedrock.dev',
-    sysPublic: [],
-    sysResourceRole: [],
     url: 'https://example.com',
-    description: userName,
-    sysStatus: 'active'
+    description: userName
   };
   return newIdentity;
 };
 
-api.getActors = function(mockData, callback) {
-  var actors = {};
-  async.forEachOf(mockData.identities, function(identity, key, callback) {
-    brIdentity.get(null, identity.identity.id, function(err, i) {
-      actors[key] = i;
-      callback(err);
-    });
-  }, function(err) {
-    callback(err, actors);
-  });
+api.getActors = async mockData => {
+  const actors = {};
+  for(const [key, record] of Object.entries(mockData.identities)) {
+    actors[key] = await brIdentity.getCapabilities({id: record.identity.id});
+  }
+  return actors;
 };
 
-api.prepareDatabase = function(mockData, callback) {
-  async.series([
-    function(callback) {
-      api.removeCollections(callback);
-    },
-    function(callback) {
-      insertTestData(mockData, callback);
-    }
-  ], callback);
+api.prepareDatabase = mockData => {
+  await api.removeCollections();
+  await insertTestData(mockData);
 };
 
-api.randomDate = function(start, end) {
-  return new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+api.randomDate = (start, end) =>
+  new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+
+api.removeCollections = async (collectionNames = ['identity']) => {
+  await promisify(database.openCollections)(collectionNames);
+  for(const collectionName of collectionNames) {
+    await database.collections[collectionName].remove({});
+  }
 };
 
-api.removeCollections = function(callback) {
-  var collectionNames = ['identity'];
-  database.openCollections(collectionNames, function() {
-    async.each(collectionNames, function(collectionName, callback) {
-      database.collections[collectionName].remove({}, callback);
-    }, function(err) {
-      callback(err);
-    });
-  });
-};
+api.removeCollection =
+  async collectionName => api.removeCollections([collectionName]);
 
-api.removeCollection = function(collection, callback) {
-  var collectionNames = [collection];
-  database.openCollections(collectionNames, function() {
-    async.each(collectionNames, function(collectionName, callback) {
-      database.collections[collectionName].remove({}, callback);
-    }, function(err) {
-      callback(err);
-    });
-  });
-};
-
-// Insert identities
-function insertTestData(mockData, callback) {
-  async.forEachOf(mockData.identities, function(identity, key, callback) {
-    brIdentity.insert(null, identity.identity, callback);
-  }, function(err) {
-    if(err) {
-      if(!database.isDuplicateError(err)) {
+async function insertTestData(mockData) {
+  for(const record of mockData.identities) {
+    try {
+      await brIdentity.insert(
+        {actor: null, identity: record.identity, meta: record.meta || {}});
+    } catch(e) {
+      if(e.name === 'DuplicateError') {
         // duplicate error means test data is already loaded
-        return callback(err);
+        continue;
       }
+      throw e;
     }
-    callback();
-  }, callback);
+  }
 }
