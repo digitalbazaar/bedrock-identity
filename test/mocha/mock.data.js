@@ -1,46 +1,50 @@
 /*
- * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2018 Digital Bazaar, Inc. All rights reserved.
  */
 /* jshint node: true */
 
 'use strict';
 
-var helpers = require('./helpers');
+const helpers = require('./helpers');
 
-var data = {};
+const data = {};
 module.exports = data;
 
-var identities = data.identities = {};
+const identities = data.identities = {};
 
-var userName;
+let userName;
 
 // regular permissions
 userName = 'alpha';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
-identities[userName].identity.sysResourceRole.push({
+identities[userName].meta = {};
+identities[userName].meta.sysResourceRole = [{
   sysRole: 'bedrock-identity.regular',
   generateResource: 'id'
-});
+}];
 
 // admin permissions
 userName = 'admin';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
-identities[userName].identity.sysResourceRole.push({
+identities[userName].meta = {};
+identities[userName].identity.sysResourceRole = [{
   sysRole: 'bedrock-identity.admin'
-});
+}];
 
 // no permissions
 userName = 'gamma';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
+identities[userName].meta = {};
 
 // regular permissions
-var userName = 'will-b-disabled';
+userName = 'will-b-disabled';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
-identities[userName].identity.sysResourceRole.push({
+identities[userName].meta = {};
+identities[userName].meta.sysResourceRole = [{
   sysRole: 'bedrock-identity.regular',
   generateResource: 'id'
-});
+}];
