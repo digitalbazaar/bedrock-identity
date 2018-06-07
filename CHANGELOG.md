@@ -4,6 +4,13 @@
 - Add `validateCapabilityDelegation` public API. Callers may use to ensure
   that an actor has the capabilities required to delegate the given
   capabilities (represented as resource roles) to another entity.
+- Pass `originalResource` in `bedrock-identity.delegateCapability.translate`
+  event. Resource translators can use this to ensure they are translating
+  for the original resource not one that has already been translated.
+- Pass `newResources`, a map of resource ID => new resource, in
+  `bedrock-identity.delegateCapability.translate` to allow for performing
+  translation on resources that are in the process of being created and
+  therefore cannot be retrieved from a database.
 
 ### Removed
 - ***BREAKING*** Remove `checkPermission` public API. Previous callers
