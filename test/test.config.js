@@ -1,7 +1,7 @@
 /*
  * Bedrock Identity Module Test Configuration.
  *
- * Copyright (c) 2012-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2012-2018 Digital Bazaar, Inc. All rights reserved.
  */
 
 var config = require('bedrock').config;
@@ -31,7 +31,8 @@ roles['bedrock-identity.regular'] = {
     permissions.IDENTITY_EDIT.id,
     permissions.IDENTITY_INSERT.id,
     permissions.IDENTITY_UPDATE_MEMBERSHIP.id,
-    permissions.IDENTITY_CAPABILITY_DELEGATE.id
+    permissions.IDENTITY_CAPABILITY_DELEGATE.id,
+    permissions.IDENTITY_CAPABILITY_REVOKE.id
   ]
 };
 roles['bedrock-identity.admin'] = {
@@ -44,6 +45,7 @@ roles['bedrock-identity.admin'] = {
     permissions.IDENTITY_EDIT.id,
     permissions.IDENTITY_INSERT.id,
     permissions.IDENTITY_REMOVE.id,
-    permissions.IDENTITY_CAPABILITY_DELEGATE.id
+    permissions.IDENTITY_CAPABILITY_DELEGATE.id,
+    permissions.IDENTITY_CAPABILITY_REVOKE.id
   ]
 };
