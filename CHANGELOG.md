@@ -11,12 +11,14 @@
   `bedrock-identity.delegateCapability.translate` to allow for performing
   translation on resources that are in the process of being created and
   therefore cannot be retrieved from a database.
+- Add `updateRoles` API.
 
 ### Removed
 - ***BREAKING*** Remove `checkPermission` public API. Previous callers
   should use `bedrock-permission` module's `checkPermission` instead.
 - ***BREAKING*** Remove `IDENTITY_ADMIN` permission. Use granular permissions
   like `IDENTITY_META_UPDATE` instead.
+- ***BREAKING*** Remove `setRoles` API. Replaced with `updateRoles`.
 
 ### Changed
 - Update `bedrock-mongodb` peer dependency.
@@ -26,6 +28,10 @@
 - Rename `IDENTITY_EDIT` permission to `IDENTITY_UPDATE`.
 - ***BREAKING*** Throw `BedrockError` of type `DuplicateError` rather than
   mongodb duplicate error.
+- ***BREAKING*** Replace `setRoles` API with `updateRoles` API that requires
+  `add` and/or `remove` parameters to be passed with resource roles rather than
+  a single `resourceRoles` parameter to wholesale replace the identity's roles
+  (which are used to compute capabilities).
 
 ## 4.6.0 - 2017-03-02
 
