@@ -19,7 +19,7 @@ describe('bedrock-identity', () => {
   });
 
   describe('setStatus API', () => {
-    describe('null actor', () => {
+    describe('null actor', async () => {
       it('should mark an identity deleted, then active', async () => {
         const testIdentity = actors['will-b-disabled'];
         await brIdentity.setStatus({
@@ -52,41 +52,55 @@ describe('bedrock-identity', () => {
         record.meta.status.should.equal('active');
       });
       it('returns error on a non-existent identity', async () => {
-        const testIdentity = {id: 'https://example.com/i/nobody'};
+        const id = 'https://example.com/i/nobody';
         let err;
         try {
           await brIdentity.setStatus({
             actor: null,
-            id: testIdentity.id,
+            id,
             status: 'deleted'
           });
         } catch(e) {
-          e = err;
+          err = e;
         }
         should.exist(err);
         err.name.should.equal('NotFoundError');
-        err.details.identity.should.equal(testIdentity.id);
+        err.details.identity.should.equal(id);
       });
     }); // end null actor
     describe('regular user', () => {
       it('permission denied on attempt to change own status', async () => {
         const actor = actors.alpha;
         const testIdentity = actors.alpha;
-        (() => brIdentity.setStatus({
-          actor,
-          id: testIdentity.id,
-          status: 'deleted'
-        })).should.throw('PermissionDenied');
+        let err;
+        try {
+          await brIdentity.setStatus({
+            actor,
+            id: testIdentity.id,
+            status: 'deleted'
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('PermissionDenied');
       });
       it('permission denied on attempt to change another identity\'s status',
         async () => {
           const actor = actors.alpha;
           const testIdentity = actors.admin;
-          (() => brIdentity.setStatus({
-            actor,
-            id: testIdentity.id,
-            status: 'deleted'
-          })).should.throw('PermissionDenied');
+          let err;
+          try {
+            await brIdentity.setStatus({
+              actor,
+              id: testIdentity.id,
+              status: 'deleted'
+            });
+          } catch(e) {
+            err = e;
+          }
+          should.exist(err);
+          err.name.should.equal('PermissionDenied');
         });
     });
     describe('admin user', function() {
@@ -128,10 +142,17 @@ describe('bedrock-identity', () => {
   describe('get API', () => {
     describe('null actor', () => {
       it('should return error on non-existent identity', async () => {
-        (() => brIdentity.get({
-          actor: null,
-          id: 'https://example.com/i/nobody'
-        })).should.throw('NotFoundError');
+        let err;
+        try {
+          await brIdentity.get({
+            actor: null,
+            id: 'https://example.com/i/nobody'
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('NotFoundError');
       });
       it('return identity when active option is not specified', async () => {
         const testIdentity = actors['will-b-disabled'];
@@ -247,10 +268,17 @@ describe('bedrock-identity', () => {
         const newIdentity = helpers.createIdentity(userName);
         const newGroup = helpers.createIdentity(groupName);
         newIdentity.memberOf = [newGroup.id];
-        (() => brIdentity.insert({
-          actor: null,
-          identity: newIdentity
-        })).should.throw('NotAllowedError');
+        let err;
+        try {
+          await brIdentity.insert({
+            actor: null,
+            identity: newIdentity
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('NotAllowedError');
       });
       it('should return error on duplicate identity', async () => {
         const userName = '99748241-3599-41a0-8445-d092de558b9f';
@@ -542,10 +570,17 @@ describe('bedrock-identity', () => {
         const newGroup = helpers.createIdentity(groupName);
         newIdentity.owner = actor.id;
         newIdentity.memberOf = [newGroup.id];
-        (() => brIdentity.insert({
-          actor,
-          identity: newIdentity
-        })).should.throw('NotAllowedError');
+        let err;
+        try {
+          await brIdentity.insert({
+            actor,
+            identity: newIdentity
+          });
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('NotAllowedError');
       });
     });
   }); // end insert API
@@ -564,9 +599,10 @@ describe('bedrock-identity', () => {
         updatedIdentity.url = 'https://new.example.com';
         updatedIdentity.label = userName + 'UPDATED';
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
+        jsonpatch.unobserve(updatedIdentity, observer);
         await brIdentity.update({
           actor: null,
+          id: updatedIdentity.id,
           patch,
           sequence: 0
         });
@@ -608,9 +644,10 @@ describe('bedrock-identity', () => {
         const observer = jsonpatch.observe(updatedIdentity);
         updatedIdentity.memberOf = newGroup.id;
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
+        jsonpatch.unobserve(updatedIdentity, observer);
         await brIdentity.update({
           actor: null,
+          id: updatedIdentity.id,
           patch,
           sequence: 0
         });
@@ -668,9 +705,10 @@ describe('bedrock-identity', () => {
         const observer = jsonpatch.observe(updatedIdentity);
         updatedIdentity.memberOf = newGroup.id;
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
+        jsonpatch.unobserve(updatedIdentity, observer);
         await brIdentity.update({
           actor: null,
+          id: updatedIdentity.id,
           patch,
           sequence: 0
         });
@@ -717,9 +755,10 @@ describe('bedrock-identity', () => {
         updatedIdentity.url = 'https://new.example.com';
         updatedIdentity.label = userName + 'UPDATED';
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
+        jsonpatch.unobserve(updatedIdentity, observer);
         await brIdentity.update({
           actor,
+          id: updatedIdentity.id,
           patch,
           sequence: 0
         });
@@ -934,43 +973,41 @@ describe('bedrock-identity', () => {
         err.name.should.equal('PermissionDenied');
       });
       it('should update identity to be in group', async () => {
-        const actor = actors.alpha;
         const userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
         const groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
         const newIdentity = helpers.createIdentity(userName);
-        const newIdentityMeta = {
-          sysResourceRole: [{
-            sysRole: 'bedrock-identity.regular',
-            generateResource: 'id'
-          }]
-        };
         const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Group'];
         newGroup.owner = newIdentity.id;
-        const newGroupMeta = {
-          sysResourceRole: [{
-            sysRole: 'bedrock-identity.regular',
-            generateResource: 'id'
-          }]
-        };
         const newRecord = await brIdentity.insert({
-          actor,
+          actor: null,
           identity: newIdentity,
-          meta: newIdentityMeta
+          meta: {
+            sysResourceRole: [{
+              sysRole: 'bedrock-identity.regular',
+              generateResource: 'id'
+            }]
+          }
         });
         const newActor = await brIdentity.getCapabilities({id: newIdentity.id});
         await brIdentity.insert({
           actor: newActor,
           identity: newGroup,
-          meta: newGroupMeta
+          meta: {
+            sysResourceRole: [{
+              sysRole: 'bedrock-identity.regular',
+              generateResource: 'id'
+            }]
+          }
         });
         const updatedIdentity = newRecord.identity;
         const observer = jsonpatch.observe(updatedIdentity);
-        updatedIdentity.memberOf = newGroup.id;
+        updatedIdentity.memberOf = [newGroup.id];
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
+        jsonpatch.unobserve(updatedIdentity, observer);
         await brIdentity.update({
           actor: newActor,
+          id: updatedIdentity.id,
           patch,
           sequence: 0
         });
@@ -994,19 +1031,14 @@ describe('bedrock-identity', () => {
         identity.description.should.equal(userName);
         identity.memberOf.should.have.same.members([newGroup.id]);
       });
-      it('should fail to add identity to a group because the actor used ',
+      it('should fail to add identity to a group because the actor used ' +
         'does not have the capability', async () => {
         const actor = actors.alpha;
         const userName = '49b3e2c4-64db-42a1-9c10-464c85e2f25d';
         const groupName = 'c85f98e9-cf58-483b-951f-58c341f4774d';
         const newIdentity = helpers.createIdentity(userName);
+        // make actor the owner of the new identity
         newIdentity.owner = actor.id;
-        const newIdentityMeta = {
-          sysResourceRole: {
-            sysRole: 'bedrock-identity.regular',
-            generateResource: 'id'
-          }
-        };
         const newGroup = helpers.createIdentity(groupName);
         newGroup.type = ['Identity', 'Group'];
         newGroup.owner = newIdentity.id;
@@ -1019,7 +1051,12 @@ describe('bedrock-identity', () => {
         const newRecord = await brIdentity.insert({
           actor,
           identity: newIdentity,
-          meta: newIdentityMeta
+          meta: {
+            sysResourceRole: [{
+              sysRole: 'bedrock-identity.regular',
+              generateResource: 'id'
+            }]
+          }
         });
         const newActor = await brIdentity.getCapabilities({id: newIdentity.id});
         await brIdentity.insert({
@@ -1031,12 +1068,18 @@ describe('bedrock-identity', () => {
         const observer = jsonpatch.observe(updatedIdentity);
         updatedIdentity.memberOf = newGroup.id;
         const patch = jsonpatch.generate(observer);
-        jsonpatch.unobserve(observer);
-        // use original `regular` actor -- it should fail!
+        jsonpatch.unobserve(updatedIdentity, observer);
+        // use original `regular` actor -- it should fail because actor is not
+        // the owner of the group, despite being the owner of the identity that
+        // owns the group (current permission model is not transparently
+        // transitive... `regular` actor would have to first grant themselves
+        // explicit capability to modify the group or its owner to be granted
+        // permission here)
         let err;
         try {
           await brIdentity.update({
             actor,
+            id: updatedIdentity.id,
             patch,
             sequence: 0
           });
@@ -1199,7 +1242,7 @@ describe('bedrock-identity', () => {
         const userName = '9d8a34bb-6b3a-4b1a-b69c-322fbbd9536e';
         const newIdentity = helpers.createIdentity(userName);
         await brIdentity.insert({actor, identity: newIdentity});
-        const exists = brIdentity.exists({actor, id: newIdentity.id});
+        const exists = await brIdentity.exists({actor, id: newIdentity.id});
         exists.should.be.true;
       });
       it('returns false for deleted identity by default', async () => {
