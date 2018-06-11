@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2015-2018 Digital Bazaar, Inc. All rights reserved.
  */
-/* globals should */
-
 'use strict';
 
 const brIdentity = require('bedrock-identity');
