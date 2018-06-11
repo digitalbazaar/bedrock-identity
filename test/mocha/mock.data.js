@@ -29,7 +29,7 @@ userName = 'admin';
 identities[userName] = {};
 identities[userName].identity = helpers.createIdentity(userName);
 identities[userName].meta = {};
-identities[userName].identity.sysResourceRole = [{
+identities[userName].meta.sysResourceRole = [{
   sysRole: 'bedrock-identity.admin'
 }];
 

@@ -1,14 +1,13 @@
 /*
- * Bedrock Identity Module Test Configuration.
- *
  * Copyright (c) 2012-2018 Digital Bazaar, Inc. All rights reserved.
  */
+'use strict';
 
-var config = require('bedrock').config;
-var path = require('path');
+const {config} = require('bedrock');
+const path = require('path');
+require('bedrock-permission');
 
-var permissions = config.permission.permissions;
-var roles = config.permission.roles;
+const {permissions, roles} = config.permission;
 
 config.mocha.tests.push(path.join(__dirname, 'mocha'));
 
@@ -28,7 +27,7 @@ roles['bedrock-identity.regular'] = {
   comment: 'Role for Test User',
   sysPermission: [
     permissions.IDENTITY_ACCESS.id,
-    permissions.IDENTITY_EDIT.id,
+    permissions.IDENTITY_UPDATE.id,
     permissions.IDENTITY_INSERT.id,
     permissions.IDENTITY_UPDATE_MEMBERSHIP.id,
     permissions.IDENTITY_CAPABILITY_DELEGATE.id,
@@ -41,10 +40,11 @@ roles['bedrock-identity.admin'] = {
   comment: 'Role for Admin User',
   sysPermission: [
     permissions.IDENTITY_ACCESS.id,
-    permissions.IDENTITY_ADMIN.id,
-    permissions.IDENTITY_EDIT.id,
+    permissions.IDENTITY_UPDATE.id,
     permissions.IDENTITY_INSERT.id,
     permissions.IDENTITY_REMOVE.id,
+    permissions.IDENTITY_META_UPDATE.id,
+    permissions.IDENTITY_UPDATE_MEMBERSHIP.id,
     permissions.IDENTITY_CAPABILITY_DELEGATE.id,
     permissions.IDENTITY_CAPABILITY_REVOKE.id
   ]

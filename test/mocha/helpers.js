@@ -31,7 +31,7 @@ api.getActors = async mockData => {
   return actors;
 };
 
-api.prepareDatabase = mockData => {
+api.prepareDatabase = async mockData => {
   await api.removeCollections();
   await insertTestData(mockData);
 };
@@ -50,7 +50,8 @@ api.removeCollection =
   async collectionName => api.removeCollections([collectionName]);
 
 async function insertTestData(mockData) {
-  for(const record of mockData.identities) {
+  const records = Object.values(mockData.identities);
+  for(const record of records) {
     try {
       await brIdentity.insert(
         {actor: null, identity: record.identity, meta: record.meta || {}});
