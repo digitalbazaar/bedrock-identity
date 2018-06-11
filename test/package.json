@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "bedrock": "^1.0.0",
+    "bedrock": "^1.12.1",
     "bedrock-identity": "file:..",
     "bedrock-mongodb": "^5.1.2",
     "bedrock-permission": "^2.2.0",
