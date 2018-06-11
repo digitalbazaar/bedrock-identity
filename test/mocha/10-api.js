@@ -1188,110 +1188,77 @@ describe('bedrock-identity', () => {
 
   describe('exists API', () => {
     describe('null actor', () => {
-      it('returns false if identity does not exist', done => {
-        var actor = null;
-        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
-        brIdentity.exists(actor, id, (err, result) => {
-          result.should.be.false;
-          done();
-        });
+      it('returns false if identity does not exist', async () => {
+        const actor = null;
+        const id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        const exists = await brIdentity.exists({actor, id});
+        exists.should.be.false;
       });
-      it('returns true if identity exists', done => {
-        var actor = null;
-        var userName = '9d8a34bb-6b3a-4b1a-b69c-322fbbd9536e';
-        var newIdentity = helpers.createIdentity(userName);
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            brIdentity.exists(actor, newIdentity.id, (err, result) => {
-              result.should.be.true;
-              callback();
-            });
-          }]
-        }, done);
+      it('returns true if identity exists', async () => {
+        const actor = null;
+        const userName = '9d8a34bb-6b3a-4b1a-b69c-322fbbd9536e';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({actor, identity: newIdentity});
+        const exists = brIdentity.exists({actor, id: newIdentity.id});
+        exists.should.be.true;
       });
-      it('returns false for deleted identity by default', done => {
-        var actor = null;
-        var userName = '8a354515-17cb-453d-b45a-5d3964706f9f';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysStatus = 'deleted';
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            brIdentity.exists(actor, newIdentity.id, (err, result) => {
-              result.should.be.false;
-              callback();
-            });
-          }]
-        }, done);
+      it('returns false for deleted identity by default', async () => {
+        const actor = null;
+        const userName = '8a354515-17cb-453d-b45a-5d3964706f9f';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({actor, identity: newIdentity});
+        await brIdentity.setStatus(
+          {actor, id: newIdentity.id, status: 'deleted'});
+        const exists = await brIdentity.exists({actor, id: newIdentity.id});
+        exists.should.be.false;
       });
-      it('returns true for deleted identity with deleted option', done => {
-        var actor = null;
-        var userName = '76fbb25e-514d-4566-b270-b08ff8989543';
-        var newIdentity = helpers.createIdentity(userName);
-        newIdentity.sysStatus = 'deleted';
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            brIdentity.exists(
-              actor, newIdentity.id, {deleted: true}, (err, result) => {
-                result.should.be.true;
-                callback();
-              });
-          }]
-        }, done);
+      it('returns true for deleted identity with deleted option', async () => {
+        const actor = null;
+        const userName = '76fbb25e-514d-4566-b270-b08ff8989543';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({actor, identity: newIdentity});
+        await brIdentity.setStatus(
+          {actor, id: newIdentity.id, status: 'deleted'});
+        const exists = await brIdentity.exists(
+          {actor, id: newIdentity.id, status: 'deleted'});
+        exists.should.be.true;
       });
     }); // end null actor
     describe('regular user', () => {
-      it('returns PermissionDenied when another user ID is specified', done => {
-        var actor = actors.alpha;
-        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
-        brIdentity.exists(actor, id, (err) => {
-          should.exist(err);
-          err.name.should.equal('PermissionDenied');
-          err.details.sysPermission
-            .should.equal('IDENTITY_ACCESS');
-          done();
-        });
+      it('returns PermissionDenied when another user ID is specified',
+        async () => {
+        const actor = actors.alpha;
+        const id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        let err;
+        try {
+          await brIdentity.exists({actor, id});
+        } catch(e) {
+          err = e;
+        }
+        should.exist(err);
+        err.name.should.equal('PermissionDenied');
+        err.details.sysPermission.should.equal('IDENTITY_ACCESS');
       });
-      it('returns true if own identity exists', done => {
-        var actor = actors.alpha;
-        brIdentity.exists(actor, actor.id, (err, result) => {
-          result.should.be.true;
-          done();
-        });
+      it('returns true if own identity exists', async () => {
+        const actor = actors.alpha;
+        const exists = await brIdentity.exists({actor, id: actor.id});
+        exists.should.be.true;
       });
     }); // end regular user
     describe('admin user', () => {
-      it('returns false if identity does not exist', done => {
-        var actor = actors.admin;
-        var id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
-        brIdentity.exists(actor, id, (err, result) => {
-          result.should.be.false;
-          done();
-        });
+      it('returns false if identity does not exist', async () => {
+        const actor = actors.admin;
+        const id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+        const exists = await brIdentity.exists({actor, id});
+        exists.should.be.false;
       });
-      it('returns true if identity exists', done => {
-        var actor = actors.admin;
-        var userName = '474af20b-fdf8-472b-a22a-b510bebf452f';
-        var newIdentity = helpers.createIdentity(userName);
-        async.auto({
-          insert: callback => {
-            brIdentity.insert(null, newIdentity, callback);
-          },
-          test: ['insert', callback => {
-            brIdentity.exists(actor, newIdentity.id, (err, result) => {
-              result.should.be.true;
-              callback();
-            });
-          }]
-        }, done);
+      it('returns true if identity exists', async () => {
+        const actor = actors.admin;
+        const userName = '474af20b-fdf8-472b-a22a-b510bebf452f';
+        const newIdentity = helpers.createIdentity(userName);
+        await brIdentity.insert({actor: null, identity: newIdentity});
+        const exists = await brIdentity.exists({actor, id: newIdentity.id});
+        exists.should.be.true;
       });
     }); // end admin user
   }); // end exists API
