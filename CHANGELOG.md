@@ -1,5 +1,7 @@
 # bedrock-identity ChangeLog
 
+## 5.0.0 - 2018-06-12
+
 ### Added
 - Add `validateCapabilityDelegation` public API. Callers may use to ensure
   that an actor has the capabilities required to delegate the given
