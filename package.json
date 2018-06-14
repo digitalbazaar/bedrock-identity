@@ -27,7 +27,7 @@
   },
   "peerDependencies": {
     "bedrock": "^1.12.1",
-    "bedrock-permission": "^2.2.0",
+    "bedrock-permission": "^2.5.0",
     "bedrock-mongodb": "3.x - 5.x",
     "bedrock-validation": "^2.4.0"
   },
