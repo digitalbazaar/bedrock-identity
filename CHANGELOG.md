@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 5.0.1 - 2018-06-14
+
+### Changed
+- Use bedrock-permission 2.5.x and simplify code.
+
 ## 5.0.0 - 2018-06-12
 
 ### Added
