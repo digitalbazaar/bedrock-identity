@@ -6,17 +6,16 @@
 const bedrock = require('bedrock');
 
 const schema = {
-  required: true,
   title: 'Identity',
+  // owner is not required
+  required: ['id'],
   type: 'object',
   properties: {
     id: {
       type: 'string',
-      required: true
     },
     owner: {
       type: 'string',
-      required: false
     }
   },
   additionalProperties: true

@@ -598,12 +598,18 @@ describe('bedrock-identity', () => {
         updatedIdentity.label = userName + 'UPDATED';
         const patch = jsonpatch.generate(observer);
         jsonpatch.unobserve(updatedIdentity, observer);
-        await brIdentity.update({
-          actor: null,
-          id: updatedIdentity.id,
-          patch,
-          sequence: 0
-        });
+        let error;
+        try {
+          await brIdentity.update({
+            actor: null,
+            id: updatedIdentity.id,
+            patch,
+            sequence: 0
+          });
+        } catch(e) {
+          error = e;
+        }
+        assertNoError(error);
         const updatedRecord = await database.collections.identity.findOne(
           {id: database.hash(newIdentity.id)});
         should.exist(updatedRecord);
