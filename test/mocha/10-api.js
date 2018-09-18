@@ -413,7 +413,7 @@ describe('bedrock-identity', () => {
           identity.email.should.equal(userName + '@bedrock.dev');
           identity.url.should.equal('https://example.com');
           identity.description.should.equal(userName);
-      });
+        });
       it('should properly generate a resource ID for three roles', async () => {
         const userName = '6ed0734c-8a29-499f-8a21-eb3bd7923620';
         const newIdentity = helpers.createIdentity(userName);
@@ -566,7 +566,7 @@ describe('bedrock-identity', () => {
           should.exist(err);
           err.name.should.equal('PermissionDenied');
           err.details.sysPermission.should.equal('IDENTITY_INSERT');
-      });
+        });
       it('should return error when memberOf group does not exist', async () => {
         const actor = actors.alpha;
         const userName = '75ef5bdf-7863-41e4-bf3d-4f6ce6cab344';
@@ -794,63 +794,64 @@ describe('bedrock-identity', () => {
       });
       it('should allow an identity to delegate capability to another one',
         async () => {
-        const alpha = '9930e2f4-6b59-11e8-9457-9f540c45ea21';
-        const beta = '995e0450-6b59-11e8-be3c-23b7c5cd73f9';
-        const alphaIdentity = helpers.createIdentity(alpha);
-        const betaIdentity = helpers.createIdentity(beta);
+          const alpha = '9930e2f4-6b59-11e8-9457-9f540c45ea21';
+          const beta = '995e0450-6b59-11e8-be3c-23b7c5cd73f9';
+          const alphaIdentity = helpers.createIdentity(alpha);
+          const betaIdentity = helpers.createIdentity(beta);
 
-        await brIdentity.insert({
-          actor: null,
-          identity: alphaIdentity,
-          meta: {
-            // capability to do regular things with self
-            sysResourceRole: {
-              sysRole: 'bedrock-identity.regular',
-              generateResource: 'id'
+          await brIdentity.insert({
+            actor: null,
+            identity: alphaIdentity,
+            meta: {
+              // capability to do regular things with self
+              sysResourceRole: {
+                sysRole: 'bedrock-identity.regular',
+                generateResource: 'id'
+              }
             }
-          }
-        });
-        await brIdentity.insert({
-          actor: null,
-          identity: betaIdentity,
-          meta: {
-            // capability to do regular things with self
-            sysResourceRole: {
-              sysRole: 'bedrock-identity.regular',
-              generateResource: 'id'
+          });
+          await brIdentity.insert({
+            actor: null,
+            identity: betaIdentity,
+            meta: {
+              // capability to do regular things with self
+              sysResourceRole: {
+                sysRole: 'bedrock-identity.regular',
+                generateResource: 'id'
+              }
             }
-          }
-        });
+          });
 
-        // now alpha grants capabilities to beta
-        const actor = await brIdentity.getCapabilities({id: alphaIdentity.id});
-        await brIdentity.updateRoles({
-          actor,
-          id: betaIdentity.id,
-          add: [{
+          // now alpha grants capabilities to beta
+          const actor = await brIdentity.getCapabilities(
+            {id: alphaIdentity.id});
+          await brIdentity.updateRoles({
+            actor,
+            id: betaIdentity.id,
+            add: [{
+              sysRole: 'bedrock-identity.regular',
+              resource: [alphaIdentity.id]
+            }],
+            sequence: 0
+          });
+
+          const record = await database.collections.identity.findOne(
+            {id: database.hash(betaIdentity.id)});
+          should.exist(record);
+          const {meta} = record;
+          meta.should.be.an('object');
+          should.exist(meta.created);
+          meta.created.should.be.a('number');
+          should.exist(meta.updated);
+          meta.updated.should.be.a('number');
+          meta.status.should.equal('active');
+          meta.sysResourceRole.should.be.an('array');
+          meta.sysResourceRole.should.have.length(1);
+          meta.sysResourceRole.should.include.deep.members([{
             sysRole: 'bedrock-identity.regular',
-            resource: [alphaIdentity.id]
-          }],
-          sequence: 0
+            resource: [betaIdentity.id, alphaIdentity.id]
+          }]);
         });
-
-        const record = await database.collections.identity.findOne(
-          {id: database.hash(betaIdentity.id)});
-        should.exist(record);
-        const {meta} = record;
-        meta.should.be.an('object');
-        should.exist(meta.created);
-        meta.created.should.be.a('number');
-        should.exist(meta.updated);
-        meta.updated.should.be.a('number');
-        meta.status.should.equal('active');
-        meta.sysResourceRole.should.be.an('array');
-        meta.sysResourceRole.should.have.length(1);
-        meta.sysResourceRole.should.include.deep.members([{
-          sysRole: 'bedrock-identity.regular',
-          resource: [betaIdentity.id, alphaIdentity.id]
-        }]);
-      });
       it('should allow an identity to revoke delegated capability from ' +
         'another one', async () => {
         const alpha = 'c5bd7b3c-6b65-11e8-b2c1-0b9ed87d924b';
@@ -923,66 +924,67 @@ describe('bedrock-identity', () => {
       });
       it('should deny an identity from delegating capability to another one',
         async () => {
-        const alpha = 'dcb9b292-6b65-11e8-ae40-1ba368afe388';
-        const beta = 'dcd6738c-6b65-11e8-a2c4-53c30c18ceba';
-        const gamma = 'ec799ff8-6b65-11e8-9d93-2788f4e7b5c8';
-        const alphaIdentity = helpers.createIdentity(alpha);
-        const betaIdentity = helpers.createIdentity(beta);
-        const gammaIdentity = helpers.createIdentity(gamma);
+          const alpha = 'dcb9b292-6b65-11e8-ae40-1ba368afe388';
+          const beta = 'dcd6738c-6b65-11e8-a2c4-53c30c18ceba';
+          const gamma = 'ec799ff8-6b65-11e8-9d93-2788f4e7b5c8';
+          const alphaIdentity = helpers.createIdentity(alpha);
+          const betaIdentity = helpers.createIdentity(beta);
+          const gammaIdentity = helpers.createIdentity(gamma);
 
-        await brIdentity.insert({
-          actor: null,
-          identity: alphaIdentity,
-          meta: {
-            // capability to do regular things with self
-            sysResourceRole: {
-              sysRole: 'bedrock-identity.regular',
-              generateResource: 'id'
+          await brIdentity.insert({
+            actor: null,
+            identity: alphaIdentity,
+            meta: {
+              // capability to do regular things with self
+              sysResourceRole: {
+                sysRole: 'bedrock-identity.regular',
+                generateResource: 'id'
+              }
             }
-          }
-        });
-        await brIdentity.insert({
-          actor: null,
-          identity: betaIdentity,
-          meta: {
-            // capability to do regular things with self
-            sysResourceRole: {
-              sysRole: 'bedrock-identity.regular',
-              generateResource: 'id'
-            }
-          }
-        });
-        await brIdentity.insert({
-          actor: null,
-          identity: gammaIdentity,
-          meta: {
-            // capability to do regular things with self
-            sysResourceRole: {
-              sysRole: 'bedrock-identity.regular',
-              generateResource: 'id'
-            }
-          }
-        });
-
-        // now alpha grants capabilities to beta
-        const actor = await brIdentity.getCapabilities({id: alphaIdentity.id});
-        let err;
-        try {
-          await brIdentity.updateRoles({
-            actor,
-            id: betaIdentity.id,
-            add: [{
-              sysRole: 'bedrock-identity.regular',
-              resource: [gammaIdentity.id]
-            }],
-            sequence: 0
           });
-        } catch(e) {
-          err = e;
-        }
-        should.exist(err);
-        err.name.should.equal('PermissionDenied');
-      });
+          await brIdentity.insert({
+            actor: null,
+            identity: betaIdentity,
+            meta: {
+              // capability to do regular things with self
+              sysResourceRole: {
+                sysRole: 'bedrock-identity.regular',
+                generateResource: 'id'
+              }
+            }
+          });
+          await brIdentity.insert({
+            actor: null,
+            identity: gammaIdentity,
+            meta: {
+              // capability to do regular things with self
+              sysResourceRole: {
+                sysRole: 'bedrock-identity.regular',
+                generateResource: 'id'
+              }
+            }
+          });
+
+          // now alpha grants capabilities to beta
+          const actor = await brIdentity.getCapabilities(
+            {id: alphaIdentity.id});
+          let err;
+          try {
+            await brIdentity.updateRoles({
+              actor,
+              id: betaIdentity.id,
+              add: [{
+                sysRole: 'bedrock-identity.regular',
+                resource: [gammaIdentity.id]
+              }],
+              sequence: 0
+            });
+          } catch(e) {
+            err = e;
+          }
+          should.exist(err);
+          err.name.should.equal('PermissionDenied');
+        });
       it('should update identity to be in group', async () => {
         const userName = '5a9e4aa8-326e-41cb-94fa-70a65feb363f';
         const groupName = 'f033fe48-706b-4b04-95e2-d9dea9903768';
@@ -1281,18 +1283,18 @@ describe('bedrock-identity', () => {
     describe('regular user', () => {
       it('returns PermissionDenied when another user ID is specified',
         async () => {
-        const actor = actors.alpha;
-        const id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
-        let err;
-        try {
-          await brIdentity.exists({actor, id});
-        } catch(e) {
-          err = e;
-        }
-        should.exist(err);
-        err.name.should.equal('PermissionDenied');
-        err.details.sysPermission.should.equal('IDENTITY_ACCESS');
-      });
+          const actor = actors.alpha;
+          const id = 'e4cbbbfe-c964-4c7f-89cc-375698f0b776';
+          let err;
+          try {
+            await brIdentity.exists({actor, id});
+          } catch(e) {
+            err = e;
+          }
+          should.exist(err);
+          err.name.should.equal('PermissionDenied');
+          err.details.sysPermission.should.equal('IDENTITY_ACCESS');
+        });
       it('returns true if own identity exists', async () => {
         const actor = actors.alpha;
         const exists = await brIdentity.exists({actor, id: actor.id});
