@@ -297,6 +297,13 @@ describe('bedrock-identity', () => {
         }
         should.exist(err);
         err.name.should.equal('DuplicateError');
+        should.exist(err.cause);
+        err.cause.should.be.an('object');
+        const {cause} = err;
+        should.exist(cause.name);
+        cause.name.should.equal('MongoError');
+        should.exist(cause.code);
+        cause.code.should.equal(11000);
       });
       it('should properly generate a resource ID for one role', async () => {
         const userName = '15065125-6e65-4f2e-9736-bb49aee468a4';
