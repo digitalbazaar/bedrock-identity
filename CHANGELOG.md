@@ -1,5 +1,10 @@
 # bedrock-identity ChangeLog
 
+## 6.1.0 - TBD
+
+### Changed
+- Use bedrock-validation@4.
+
 ## 6.0.0 - 2018-09-17
 
 ### Changed
