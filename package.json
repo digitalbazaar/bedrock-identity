@@ -3,7 +3,10 @@
   "version": "6.1.1-0",
   "description": "Bedrock identity",
   "main": "./lib",
-  "scripts": {},
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/digitalbazaar/bedrock-identity"
@@ -23,7 +26,8 @@
   "dependencies": {
     "assert-plus": "^1.0.0",
     "fast-json-patch": "^2.0.6",
-    "lodash": "^4.17.4"
+    "lodash": "^4.17.4",
+    "snyk": "^1.192.3"
   },
   "peerDependencies": {
     "bedrock": "^1.12.1",
@@ -33,5 +37,6 @@
   },
   "directories": {
     "lib": "./lib"
-  }
+  },
+  "snyk": true
 }
