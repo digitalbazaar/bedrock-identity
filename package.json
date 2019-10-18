@@ -26,12 +26,16 @@
     "lodash": "^4.17.4"
   },
   "peerDependencies": {
-    "bedrock": "^1.12.1",
+    "bedrock": "^2.0.0",
     "bedrock-permission": "^2.5.0",
-    "bedrock-mongodb": "3.x - 5.x",
+    "bedrock-mongodb": "3.x - 6.x",
     "bedrock-validation": "^4.0.0"
   },
   "directories": {
     "lib": "./lib"
+  },
+  "devDependencies": {
+    "eslint": "^6.5.1",
+    "eslint-config-digitalbazaar": "^2.0.1"
   }
 }

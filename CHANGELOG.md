@@ -1,5 +1,11 @@
 # bedrock-identity ChangeLog
 
+## 7.0.0 - TBD
+
+### Changed
+- **BREAKING**: Refactor module for use with bedrock@2.
+- **BREAKING**: Remove identity and security contexts.
+
 ## 6.1.0 - 2018-12-03
 
 ### Changed

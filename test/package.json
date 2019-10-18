@@ -2,7 +2,7 @@
   "name": "bedrock-identity-test",
   "version": "0.0.1-0",
   "description": "Bedrock identity test",
-  "main": "./lib",
+  "private": true,
   "scripts": {
     "test": "node --preserve-symlinks test.js test"
   },
@@ -23,11 +23,11 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "bedrock": "^1.12.1",
+    "bedrock": "digitalbazaar/bedrock#remove-jsonld",
     "bedrock-identity": "file:..",
-    "bedrock-mongodb": "^5.1.2",
+    "bedrock-mongodb": "^6.0.0",
     "bedrock-permission": "^2.5.0",
-    "bedrock-test": "^2.0.0",
+    "bedrock-test": "digitalbazaar/bedrock-test#4.x",
     "bedrock-validation": "^4.0.0",
     "fast-json-patch": "^2.0.6",
     "lodash": "^4.17.4"
