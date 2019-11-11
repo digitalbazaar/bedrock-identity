@@ -14,7 +14,7 @@
   "author": {
     "name": "Digital Bazaar, Inc.",
     "email": "support@digitalbazaar.com",
-    "url": "http://digitalbazaar.com"
+    "url": "https://digitalbazaar.com/"
   },
   "bugs": {
     "url": "https://github.com/digitalbazaar/bedrock-identity/issues"
@@ -26,7 +26,7 @@
     "lodash": "^4.17.15"
   },
   "peerDependencies": {
-    "bedrock": "^2.0.0",
+    "bedrock": "2.0.0 - 3.x",
     "bedrock-permission": "^2.5.0",
     "bedrock-mongodb": "3.x - 6.x",
     "bedrock-validation": "^4.0.0"
