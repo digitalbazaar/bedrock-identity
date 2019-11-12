@@ -16,20 +16,19 @@
   "author": {
     "name": "Digital Bazaar, Inc.",
     "email": "support@digitalbazaar.com",
-    "url": "http://digitalbazaar.com"
+    "url": "https://digitalbazaar.com/"
   },
   "bugs": {
     "url": "https://github.com/digitalbazaar/bedrock-identity/issues"
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-identity",
   "dependencies": {
-    "bedrock": "digitalbazaar/bedrock#remove-jsonld",
+    "bedrock": "^3.0.1",
     "bedrock-identity": "file:..",
-    "bedrock-mongodb": "^6.0.0",
-    "bedrock-permission": "^2.5.0",
-    "bedrock-test": "digitalbazaar/bedrock-test#4.x",
-    "bedrock-validation": "^4.0.0",
-    "fast-json-patch": "^2.0.6",
-    "lodash": "^4.17.4"
+    "bedrock-mongodb": "^6.0.2",
+    "bedrock-permission": "^2.5.4",
+    "bedrock-test": "^4.0.2",
+    "bedrock-validation": "^4.2.0",
+    "fast-json-patch": "^2.0.6"
   }
 }
