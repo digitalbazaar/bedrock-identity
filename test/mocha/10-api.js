@@ -298,10 +298,10 @@ describe('bedrock-identity', () => {
         should.exist(err);
         err.name.should.equal('DuplicateError');
         should.exist(err.cause);
-        err.cause.should.be.an('object');
+        err.cause.should.be.an('Error');
         const {cause} = err;
         should.exist(cause.name);
-        cause.name.should.equal('MongoError');
+        cause.name.should.equal('BulkWriteError');
         should.exist(cause.code);
         cause.code.should.equal(11000);
       });
