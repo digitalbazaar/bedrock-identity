@@ -42,7 +42,7 @@ api.randomDate = (start, end) =>
 api.removeCollections = async (collectionNames = ['identity']) => {
   await promisify(database.openCollections)(collectionNames);
   for(const collectionName of collectionNames) {
-    await database.collections[collectionName].remove({});
+    await database.collections[collectionName].deleteMany({});
   }
 };
 
