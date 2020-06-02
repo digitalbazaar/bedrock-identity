@@ -4,7 +4,9 @@
   "description": "Bedrock identity",
   "license": "SEE LICENSE IN LICENSE.md",
   "main": "./lib",
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint ."
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/digitalbazaar/bedrock-identity"
@@ -36,7 +38,7 @@
     "lib": "./lib"
   },
   "devDependencies": {
-    "eslint": "^6.5.1",
-    "eslint-config-digitalbazaar": "^2.0.1"
+    "eslint": "^7.1.0",
+    "eslint-config-digitalbazaar": "^2.5.0"
   }
 }
