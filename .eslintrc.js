@@ -1,4 +1,7 @@
 module.exports = {
-  env: {node: true},
+  root: true,
+  env: {
+    node: true
+  },
   extends: ['digitalbazaar']
 };
