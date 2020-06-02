@@ -28,8 +28,8 @@
   "dependencies": {
     "bedrock": "^3.0.1",
     "bedrock-identity": "file:..",
-    "bedrock-mongodb": "^6.0.2",
-    "bedrock-permission": "^2.5.4",
+    "bedrock-mongodb": "digitalbazaar/bedrock-mongodb#driver3",
+    "bedrock-permission": "digitalbazaar/bedrock-permission#mongo-version-3",
     "bedrock-test": "^4.0.2",
     "bedrock-validation": "^4.2.0",
     "fast-json-patch": "^2.0.6"
