@@ -4,7 +4,10 @@
   "description": "Bedrock identity test",
   "private": true,
   "scripts": {
-    "test": "node --preserve-symlinks test.js test"
+    "test": "node --preserve-symlinks test.js test",
+    "coverage": "cross-env NODE_ENV=test nyc --reporter=lcov --reporter=text-summary npm test",
+    "coverage-ci": "cross-env NODE_ENV=test nyc --reporter=lcovonly npm test",
+    "coverage-report": "nyc report"
   },
   "repository": {
     "type": "git",
@@ -30,5 +33,18 @@
     "bedrock-test": "^4.0.2",
     "bedrock-validation": "^4.2.0",
     "fast-json-patch": "^2.0.6"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.2",
+    "nyc": "^15.0.1"
+  },
+  "nyc": {
+    "excludeNodeModules": false,
+    "include": [
+      "node_modules/bedrock-identity/**"
+    ],
+    "exclude": [
+      "node_modules/bedrock-identity/node_modules/**"
+    ]
   }
 }
