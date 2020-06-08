@@ -28,7 +28,7 @@
   "dependencies": {
     "bedrock": "^3.0.1",
     "bedrock-identity": "file:..",
-    "bedrock-mongodb": "digitalbazaar/bedrock-mongodb#driver3",
+    "bedrock-mongodb": "^7.0.0",
     "bedrock-permission": "digitalbazaar/bedrock-permission#mongo-version-3",
     "bedrock-test": "^4.0.2",
     "bedrock-validation": "^4.2.0",
