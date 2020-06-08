@@ -1,5 +1,15 @@
 # bedrock-identity ChangeLog
 
+## 7.1.0 -
+
+### Changed
+  - Upgraded to `bedrock-mongodb` ^7.0.0.
+  - Changed mongo apis to match mongo driver 3.5.
+
+### Added
+  - Find methods now accept options.projections.
+  - Find will throw if both fields and options.projections are set.
+
 ## 7.0.1 - 2019-11-12
 
 ### Changed
