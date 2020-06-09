@@ -1,10 +1,11 @@
 # bedrock-identity ChangeLog
 
-## 7.1.0 -
+## 8.0.0 -
 
 ### Changed
-  - Upgraded to `bedrock-mongodb` ^7.0.0.
+  - **BREAKING**: Upgrad to `bedrock-mongodb` ^7.0.0.
   - Changed mongo apis to match mongo driver 3.5.
+  - peerDependency for `bedrock-permission` ^3.0.0.
 
 ### Added
   - Find methods now accept options.projections.
