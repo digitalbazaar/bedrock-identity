@@ -1,6 +1,6 @@
 # bedrock-identity ChangeLog
 
-## 8.0.0 -
+## 8.0.0 - 2020-06-09
 
 ### Changed
   - **BREAKING**: Upgrad to `bedrock-mongodb` ^7.0.0.
